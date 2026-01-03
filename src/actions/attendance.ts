@@ -294,6 +294,12 @@ export async function markAttendance(qrToken: string, lat: number, lng: number) 
 
         const floor = floorResult.rows[0];
 
+        // Debug Logs
+        console.log('--- Attendance Debug ---');
+        console.log(`Student: ${lat}, ${lng}`);
+        console.log(`Floor Center: ${floor.center_lat}, ${floor.center_lng}`);
+        console.log(`Radius: ${floor.radius_m}`);
+
         // Check if floor has location set
         if (!floor.center_lat || !floor.center_lng) {
             return { error: 'Attendance location not configured. Contact staff.' };
@@ -306,10 +312,14 @@ export async function markAttendance(qrToken: string, lat: number, lng: number) 
             parseFloat(floor.center_lng)
         );
 
+        console.log(`Calculated Distance: ${distance}m`);
+        console.log('------------------------');
+
         // 7. Check if within radius
         if (distance > floor.radius_m) {
+            console.log(`REJECTED: Distance ${distance}m > Radius ${floor.radius_m}m`);
             return {
-                error: `You are too far from the classroom (${Math.round(distance)}m away). Please move closer.`,
+                error: `You are too far from the classroom (${Math.round(distance)}m away). Radius allowed: ${floor.radius_m}m.`,
                 distance: Math.round(distance),
                 required: floor.radius_m
             };

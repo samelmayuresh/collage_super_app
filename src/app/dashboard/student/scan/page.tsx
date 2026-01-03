@@ -38,7 +38,31 @@ export default function StudentScanPage() {
     const [history, setHistory] = useState<AttendanceHistory[]>([]);
     const [showHistory, setShowHistory] = useState(false);
     const [isMobile, setIsMobile] = useState(true); // Default to true for SSR
+    const [debugLat, setDebugLat] = useState<string | null>(null);
+    const [debugLng, setDebugLng] = useState<string | null>(null);
+    const [gettingGPS, setGettingGPS] = useState(false);
     const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+
+    function getGPSDebug() {
+        setGettingGPS(true);
+        if (!navigator.geolocation) {
+            alert('Geolocation not supported');
+            setGettingGPS(false);
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                setDebugLat(pos.coords.latitude.toFixed(6));
+                setDebugLng(pos.coords.longitude.toFixed(6));
+                setGettingGPS(false);
+            },
+            (err) => {
+                alert('Error: ' + err.message);
+                setGettingGPS(false);
+            },
+            { enableHighAccuracy: true }
+        );
+    }
 
     useEffect(() => {
         loadHistory();
@@ -295,6 +319,20 @@ export default function StudentScanPage() {
                                     <p className="text-gray-400 text-sm mt-4">
                                         Point your camera at the QR code shown by your teacher
                                     </p>
+
+                                    {/* Debug / Confidence Info */}
+                                    <div className="mt-6 p-4 bg-gray-50 rounded-xl text-xs text-gray-500 font-mono text-left">
+                                        <p className="font-bold mb-1">📍 GPS Debug Info:</p>
+                                        <p>Status: {gettingGPS ? 'Acquiring...' : 'Ready'}</p>
+                                        {debugLat && <p>Your Lat: {debugLat}</p>}
+                                        {debugLng && <p>Your Lng: {debugLng}</p>}
+                                        <button
+                                            onClick={() => getGPSDebug()}
+                                            className="mt-2 text-blue-600 hover:underline"
+                                        >
+                                            Check My Location
+                                        </button>
+                                    </div>
                                 </div>
                             )}
 
