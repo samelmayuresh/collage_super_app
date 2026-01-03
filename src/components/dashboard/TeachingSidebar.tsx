@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, Users, BookOpen, Video, FileText, Settings, HelpCircle, LogOut, Menu, X, History, User } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, Video, FileText, Settings, HelpCircle, LogOut, Menu, X, History, User, Calendar } from 'lucide-react';
 import { logout } from '../../actions/auth';
 
 export function TeachingSidebar() {
