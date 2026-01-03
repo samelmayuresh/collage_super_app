@@ -252,16 +252,14 @@ export async function markAttendance(qrToken: string, lat: number, lng: number) 
             return { error: 'QR code has expired. Please scan new code.' };
         }
 
-        // 3.5 Check if student is enrolled in this class
-        if (attendanceSession.class_id) {
-            const enrollmentCheck = await appDb.query(
-                'SELECT 1 FROM student_classes WHERE student_id = $1 AND class_id = $2',
-                [session.id, attendanceSession.class_id]
-            );
+        // 3.5 Check if student is enrolled in this classroom
+        const enrollmentCheck = await appDb.query(
+            'SELECT 1 FROM student_classrooms WHERE student_id = $1 AND classroom_id = $2',
+            [session.id, attendanceSession.classroom_id]
+        );
 
-            if (enrollmentCheck.rows.length === 0) {
-                return { error: 'You are not valid student of this class.' };
-            }
+        if (enrollmentCheck.rows.length === 0) {
+            return { error: 'You are not enrolled in this classroom.' };
         }
 
         // 4. Check student not already marked

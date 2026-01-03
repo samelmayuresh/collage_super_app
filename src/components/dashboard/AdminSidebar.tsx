@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, Users, GraduationCap, Book, Upload, Settings, LogOut, Menu, X, User, Calendar, DoorOpen } from 'lucide-react';
+import { LayoutDashboard, Users, Book, Upload, LogOut, Menu, X, User, Calendar, DoorOpen } from 'lucide-react';
 import { logout } from '../../actions/auth';
 
 export function AdminSidebar() {
@@ -46,10 +46,6 @@ export function AdminSidebar() {
                     <Link href="/dashboard/admin" onClick={() => setIsOpen(false)} className={activeClass}>
                         <LayoutDashboard size={20} />
                         <span>Dashboard</span>
-                    </Link>
-                    <Link href="/dashboard/admin/classes" onClick={() => setIsOpen(false)} className={linkClass}>
-                        <GraduationCap size={20} />
-                        <span>Classes & Subjects</span>
                     </Link>
                     <Link href="/dashboard/admin/classrooms" onClick={() => setIsOpen(false)} className={linkClass}>
                         <DoorOpen size={20} />
@@ -96,10 +92,6 @@ export function AdminSidebar() {
                     <Link href="/dashboard/admin" className={activeClass}>
                         <LayoutDashboard size={20} />
                         <span>Dashboard</span>
-                    </Link>
-                    <Link href="/dashboard/admin/classes" className={linkClass}>
-                        <GraduationCap size={20} />
-                        <span>Classes & Subjects</span>
                     </Link>
                     <Link href="/dashboard/admin/classrooms" className={linkClass}>
                         <DoorOpen size={20} />
