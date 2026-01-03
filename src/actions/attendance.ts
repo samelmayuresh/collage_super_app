@@ -29,7 +29,7 @@ export async function startAttendanceSession(classroomId: number, classId?: numb
             // OR if it's the same teacher trying to start a new one (force restart)
             if (hoursSinceStart > 4 || activeSession.teacher_id === session.id) {
                 await appDb.query(
-                    'UPDATE attendance_sessions SET is_active = false WHERE id = $1',
+                    'UPDATE attendance_sessions SET is_active = false, ended_at = NOW() WHERE id = $1',
                     [activeSession.id]
                 );
             } else {
@@ -102,7 +102,7 @@ export async function endAttendanceSession(sessionId: number) {
 
     try {
         // Allow ADMIN to close any session, Teacher only their own
-        let query = 'UPDATE attendance_sessions SET is_active = false WHERE id = $1';
+        let query = 'UPDATE attendance_sessions SET is_active = false, ended_at = NOW() WHERE id = $1';
         let params = [sessionId];
 
         if (session.role === 'TEACHING') {
