@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, Users, GraduationCap, Book, Upload, Settings, LogOut, Menu, X, User } from 'lucide-react';
+import { LayoutDashboard, Users, GraduationCap, Book, Upload, Settings, LogOut, Menu, X, User, Calendar } from 'lucide-react';
 import { logout } from '../../actions/auth';
 
 export function AdminSidebar() {
@@ -52,11 +52,15 @@ export function AdminSidebar() {
                         <span>Classes & Subjects</span>
                     </Link>
                     <Link href="/dashboard/admin/assignments" onClick={() => setIsOpen(false)} className={linkClass}>
-                        <Users size={20} />
-                        <span>Teacher Assignments</span>
+                        <Book size={20} />
+                        <span>Assignments</span>
+                    </Link>
+                    <Link href="/dashboard/admin/timetable" onClick={() => setIsOpen(false)} className={linkClass}>
+                        <Calendar size={20} />
+                        <span>Timetables</span>
                     </Link>
                     <Link href="/dashboard/admin/students" onClick={() => setIsOpen(false)} className={linkClass}>
-                        <Book size={20} />
+                        <Users size={20} />
                         <span>Students</span>
                     </Link>
                     <Link href="/dashboard/admin/import" onClick={() => setIsOpen(false)} className={linkClass}>
@@ -94,11 +98,15 @@ export function AdminSidebar() {
                         <span>Classes & Subjects</span>
                     </Link>
                     <Link href="/dashboard/admin/assignments" className={linkClass}>
-                        <Users size={20} />
-                        <span>Teacher Assignments</span>
+                        <Book size={20} />
+                        <span>Assignments</span>
+                    </Link>
+                    <Link href="/dashboard/admin/timetable" className={linkClass}>
+                        <Calendar size={20} />
+                        <span>Timetables</span>
                     </Link>
                     <Link href="/dashboard/admin/students" className={linkClass}>
-                        <Book size={20} />
+                        <Users size={20} />
                         <span>Students</span>
                     </Link>
                     <Link href="/dashboard/admin/import" className={linkClass}>

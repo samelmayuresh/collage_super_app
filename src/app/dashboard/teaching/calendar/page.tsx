@@ -149,9 +149,14 @@ export default function TeacherCalendarPage() {
         calendarDays.push({ day: i, isCurrentMonth: false, date: '' });
     }
 
-    // Get events for a specific date
     function getEventsForDate(dateStr: string) {
-        return events.filter(e => e.event_date?.split('T')[0] === dateStr);
+        return events.filter(e => {
+            if (!e.event_date) return false;
+            const eventDateStr = typeof e.event_date === 'string'
+                ? e.event_date.split('T')[0]
+                : new Date(e.event_date).toISOString().split('T')[0];
+            return eventDateStr === dateStr;
+        });
     }
 
     // Get unique classes from assignments

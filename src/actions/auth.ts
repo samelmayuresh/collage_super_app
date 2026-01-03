@@ -207,3 +207,20 @@ export async function getFullProfile() {
         return { error: 'Failed to fetch profile' };
     }
 }
+export async function getUsersByRole(role: string) {
+    const session = await getSession();
+    if (!session || session.role !== 'ADMIN') {
+        return { error: 'Unauthorized' };
+    }
+
+    try {
+        const result = await db.query(
+            'SELECT id, name, email FROM users WHERE role = $1 ORDER BY name',
+            [role]
+        );
+        return { users: result.rows };
+    } catch (error) {
+        console.error('Error fetching users by role:', error);
+        return { error: 'Failed to fetch users' };
+    }
+}

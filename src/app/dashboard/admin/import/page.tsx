@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2, X, Users } from 'lucide-react';
 import { getClasses, addStudentToClass } from '../../../../actions/classes';
 
@@ -21,9 +21,9 @@ export default function BulkImportPage() {
     const [step, setStep] = useState<'upload' | 'preview' | 'complete'>('upload');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    useState(() => {
+    useEffect(() => {
         loadClasses();
-    });
+    }, []);
 
     async function loadClasses() {
         const result = await getClasses();

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, Building2, Layers, DoorOpen, LogOut, Menu, X, MapPin, User } from 'lucide-react';
+import { LayoutDashboard, Building2, Layers, DoorOpen, LogOut, Menu, X, MapPin, User, GraduationCap } from 'lucide-react';
 import { logout } from '../../actions/auth';
 
 export function StaffSidebar() {
@@ -59,6 +59,10 @@ export function StaffSidebar() {
                         <DoorOpen size={20} />
                         <span>Classrooms</span>
                     </Link>
+                    <Link href="/dashboard/staff/classes" onClick={() => setIsOpen(false)} className={linkClass}>
+                        <GraduationCap size={20} />
+                        <span>Classes & Subjects</span>
+                    </Link>
                     <Link href="/dashboard/staff/location" onClick={() => setIsOpen(false)} className={linkClass}>
                         <MapPin size={20} />
                         <span>Floor Locations</span>
@@ -100,6 +104,10 @@ export function StaffSidebar() {
                     <Link href="/dashboard/staff/classrooms" className={linkClass}>
                         <DoorOpen size={20} />
                         <span>Classrooms</span>
+                    </Link>
+                    <Link href="/dashboard/staff/classes" className={linkClass}>
+                        <GraduationCap size={20} />
+                        <span>Classes & Subjects</span>
                     </Link>
                     <Link href="/dashboard/staff/location" className={linkClass}>
                         <MapPin size={20} />

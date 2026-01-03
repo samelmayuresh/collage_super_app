@@ -16,10 +16,23 @@ export async function createCalendarEvent(data: {
     endTime?: string;
     isRecurring?: boolean;
     recurrencePattern?: string;
+    teacherId?: number; // Optional: Only for Admin use
 }) {
     const session = await getSession();
-    if (!session || session.role !== 'TEACHING') {
-        return { error: 'Unauthorized - Teachers only' };
+    if (!session || (session.role !== 'TEACHING' && session.role !== 'ADMIN')) {
+        return { error: 'Unauthorized' };
+    }
+
+    // Determine teacher_id: Admin can specify, Teacher defaults to self
+    let teacherId = session.id;
+    if (session.role === 'ADMIN') {
+        if (!data.teacherId) {
+            return { error: 'Admin must provide teacherId' };
+        }
+        teacherId = data.teacherId;
+    } else {
+        // Teachers cannot create events for others
+        teacherId = session.id;
     }
 
     try {
@@ -29,7 +42,7 @@ export async function createCalendarEvent(data: {
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
              RETURNING *`,
             [
-                session.id,
+                teacherId,
                 data.classId,
                 data.subjectId || null,
                 data.title,
@@ -49,11 +62,13 @@ export async function createCalendarEvent(data: {
     }
 }
 
-export async function getEventsForTeacher(startDate?: string, endDate?: string) {
+export async function getEventsForTeacher(startDate?: string, endDate?: string, teacherId?: number) {
     const session = await getSession();
-    if (!session || session.role !== 'TEACHING') {
+    if (!session || (session.role !== 'TEACHING' && session.role !== 'ADMIN')) {
         return { error: 'Unauthorized' };
     }
+
+    const targetTeacherId = (session.role === 'ADMIN' && teacherId) ? teacherId : session.id;
 
     try {
         let query = `
@@ -63,7 +78,7 @@ export async function getEventsForTeacher(startDate?: string, endDate?: string) 
             LEFT JOIN subjects s ON ce.subject_id = s.id
             WHERE ce.teacher_id = $1
         `;
-        const params: any[] = [session.id];
+        const params: any[] = [targetTeacherId];
 
         if (startDate && endDate) {
             query += ` AND ce.event_date BETWEEN $2 AND $3`;
@@ -163,16 +178,21 @@ export async function updateCalendarEvent(eventId: number, data: {
     endTime?: string;
 }) {
     const session = await getSession();
-    if (!session || session.role !== 'TEACHING') {
+    if (!session || (session.role !== 'TEACHING' && session.role !== 'ADMIN')) {
         return { error: 'Unauthorized' };
     }
 
     try {
-        // Verify ownership
-        const check = await appDb.query(
-            'SELECT * FROM calendar_events WHERE id = $1 AND teacher_id = $2',
-            [eventId, session.id]
-        );
+        // Verify ownership (Admin can edit any, Teacher only own)
+        let query = 'SELECT * FROM calendar_events WHERE id = $1';
+        let checkParams: any[] = [eventId];
+
+        if (session.role === 'TEACHING') {
+            query += ' AND teacher_id = $2';
+            checkParams.push(session.id);
+        }
+
+        const check = await appDb.query(query, checkParams);
 
         if (check.rows.length === 0) {
             return { error: 'Event not found or not authorized' };
