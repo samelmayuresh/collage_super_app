@@ -27,7 +27,7 @@ interface Teacher {
 interface Building { id: number; name: string; }
 interface Floor { id: number; floor_number: number; }
 interface Classroom { id: number; room_number: string; }
-interface Branch { id: number; name: string; }
+interface Branch { id: number; name: string; code?: string; }
 
 export default function TeacherAssignmentsPage() {
     const [allAssignments, setAllAssignments] = useState<Record<number, Assignment[]>>({});
@@ -332,7 +332,7 @@ export default function TeacherAssignmentsPage() {
                                             {teacherBranches[parseInt(teacherId)] && (
                                                 <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full flex items-center gap-1 font-normal">
                                                     <GitBranch size={12} />
-                                                    {branches.find(b => b.id === teacherBranches[parseInt(teacherId)])?.code || 'Branch'}
+                                                    {branches.find(b => b.id === teacherBranches[parseInt(teacherId)])?.name || 'Branch'}
                                                 </span>
                                             )}
                                         </h3>
