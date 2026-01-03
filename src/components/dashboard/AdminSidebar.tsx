@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, Users, Book, Upload, LogOut, Menu, X, User, Calendar, DoorOpen, GitBranch } from 'lucide-react';
+import { LayoutDashboard, Users, Book, BookOpen, Upload, LogOut, Menu, X, User, Calendar, DoorOpen, GitBranch } from 'lucide-react';
 import { logout } from '../../actions/auth';
 
 export function AdminSidebar() {
@@ -98,6 +98,10 @@ export function AdminSidebar() {
                     <Link href="/dashboard/admin/assignments" className={linkClass}>
                         <Book size={20} />
                         <span>Assignments</span>
+                    </Link>
+                    <Link href="/dashboard/admin/subjects" className={linkClass}>
+                        <BookOpen size={20} />
+                        <span>Subjects</span>
                     </Link>
                     <Link href="/dashboard/admin/branches" className={linkClass}>
                         <GitBranch size={20} />
