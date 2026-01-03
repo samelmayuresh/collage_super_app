@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, Building2, Layers, DoorOpen, LogOut, Menu, X, MapPin } from 'lucide-react';
+import { LayoutDashboard, Building2, Layers, DoorOpen, LogOut, Menu, X, MapPin, User } from 'lucide-react';
 import { logout } from '../../actions/auth';
 
 export function StaffSidebar() {
@@ -63,6 +63,10 @@ export function StaffSidebar() {
                         <MapPin size={20} />
                         <span>Floor Locations</span>
                     </Link>
+                    <Link href="/dashboard/staff/profile" onClick={() => setIsOpen(false)} className={linkClass}>
+                        <User size={20} />
+                        <span>Profile</span>
+                    </Link>
 
                     <form action={logout} className="mt-4">
                         <button type="submit" className={linkClass + " w-full text-red-500 hover:text-red-600 hover:bg-red-50"}>
@@ -100,6 +104,10 @@ export function StaffSidebar() {
                     <Link href="/dashboard/staff/location" className={linkClass}>
                         <MapPin size={20} />
                         <span>Floor Locations</span>
+                    </Link>
+                    <Link href="/dashboard/staff/profile" className={linkClass}>
+                        <User size={20} />
+                        <span>Profile</span>
                     </Link>
                 </nav>
 

@@ -81,7 +81,7 @@ export function StudentSidebar() {
                         <span className="font-medium">Settings</span>
                     </Link>
                     <Link
-                        href="#"
+                        href="/dashboard/student/profile"
                         onClick={() => setIsOpen(false)}
                         className="flex items-center gap-3 p-3 text-gray-600 hover:bg-white rounded-xl transition-colors"
                     >
@@ -125,7 +125,7 @@ export function StudentSidebar() {
                 </nav>
 
                 <div className="mt-auto flex flex-col gap-4 items-center">
-                    <Link href="#" className="p-3 text-gray-400 hover:text-black hover:bg-white rounded-full transition-colors">
+                    <Link href="/dashboard/student/profile" className="p-3 text-gray-400 hover:text-black hover:bg-white rounded-full transition-colors">
                         <User size={24} />
                     </Link>
                     <form action={logout}>

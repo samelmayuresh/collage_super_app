@@ -117,3 +117,54 @@ async function createSession(user: any) {
         path: '/',
     });
 }
+
+export async function updateProfile(formData: FormData) {
+    const session = await getSession();
+    if (!session) {
+        return { error: 'Unauthorized' };
+    }
+
+    const name = formData.get('name') as string;
+    const currentPassword = formData.get('currentPassword') as string;
+    const newPassword = formData.get('newPassword') as string;
+
+    try {
+        // Update name if provided
+        if (name && name !== session.name) {
+            await db.query('UPDATE users SET name = $1 WHERE id = $2', [name, session.id]);
+        }
+
+        // Update password if provided
+        if (currentPassword && newPassword) {
+            // Verify current password
+            const result = await db.query('SELECT password FROM users WHERE id = $1', [session.id]);
+            if (result.rows.length === 0) {
+                return { error: 'User not found' };
+            }
+
+            const isValid = await bcrypt.compare(currentPassword, result.rows[0].password);
+            if (!isValid) {
+                return { error: 'Current password is incorrect' };
+            }
+
+            if (newPassword.length < 4) {
+                return { error: 'New password must be at least 4 characters' };
+            }
+
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+            await db.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, session.id]);
+        }
+
+        // Refresh session with new data
+        const updatedUser = await db.query('SELECT id, name, email, role FROM users WHERE id = $1', [session.id]);
+        if (updatedUser.rows.length > 0) {
+            await createSession(updatedUser.rows[0]);
+        }
+
+        return { success: true, message: 'Profile updated successfully' };
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        return { error: 'Failed to update profile' };
+    }
+}
+

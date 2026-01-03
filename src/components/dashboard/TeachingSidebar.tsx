@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, Users, BookOpen, Video, FileText, Settings, HelpCircle, LogOut, Menu, X, History } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, Video, FileText, Settings, HelpCircle, LogOut, Menu, X, History, User } from 'lucide-react';
 import { logout } from '../../actions/auth';
 
 export function TeachingSidebar() {
@@ -91,6 +91,14 @@ export function TeachingSidebar() {
                         <Video size={20} />
                         <span>Mini Exam</span>
                     </Link>
+                    <Link
+                        href="/dashboard/teaching/profile"
+                        onClick={() => setIsOpen(false)}
+                        className={linkClass}
+                    >
+                        <User size={20} />
+                        <span>Profile</span>
+                    </Link>
 
                     <div className="mt-4 p-4 bg-blue-50 rounded-2xl text-center">
                         <div className="w-10 h-10 bg-blue-200 rounded-full mx-auto mb-2 flex items-center justify-center text-xl">?</div>
@@ -148,6 +156,10 @@ export function TeachingSidebar() {
 
                 {/* Bottom Actions */}
                 <div className="mt-auto flex flex-col gap-2">
+                    <Link href="/dashboard/teaching/profile" className={linkClass}>
+                        <User size={20} />
+                        <span>Profile</span>
+                    </Link>
                     <div className="p-4 bg-blue-50 rounded-2xl mb-4 text-center">
                         <div className="w-10 h-10 bg-blue-200 rounded-full mx-auto mb-2 flex items-center justify-center text-2xl">?</div>
                         <h4 className="font-bold text-sm mb-1">Need help?</h4>
