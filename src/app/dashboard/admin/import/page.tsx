@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2, X, Users } from 'lucide-react';
-import { getClasses, addStudentToClass } from '../../../../actions/classes';
+import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2, X, Building2 } from 'lucide-react';
+import { getAllClassroomsWithDetails } from '../../../../actions/classroomAssignments';
+import Link from 'next/link';
 
 interface StudentRow {
     name: string;
@@ -12,9 +13,16 @@ interface StudentRow {
     message?: string;
 }
 
+interface Classroom {
+    id: number;
+    room_number: string;
+    floor_number: number;
+    building_name: string;
+}
+
 export default function BulkImportPage() {
-    const [classes, setClasses] = useState<any[]>([]);
-    const [selectedClass, setSelectedClass] = useState('');
+    const [classrooms, setClassrooms] = useState<Classroom[]>([]);
+    const [selectedClassroomId, setSelectedClassroomId] = useState('');
     const [students, setStudents] = useState<StudentRow[]>([]);
     const [loading, setLoading] = useState(false);
     const [importing, setImporting] = useState(false);
@@ -22,12 +30,12 @@ export default function BulkImportPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        loadClasses();
+        loadData();
     }, []);
 
-    async function loadClasses() {
-        const result = await getClasses();
-        if (result.classes) setClasses(result.classes);
+    async function loadData() {
+        const result = await getAllClassroomsWithDetails();
+        if (result.classrooms) setClassrooms(result.classrooms);
     }
 
     function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -93,19 +101,18 @@ export default function BulkImportPage() {
     }
 
     async function handleImport() {
-        if (!selectedClass) {
-            alert('Please select a class');
+        if (!selectedClassroomId) {
+            alert('Please select a classroom');
             return;
         }
 
         setImporting(true);
 
-        // First, create student accounts via API
+        // Create student accounts via API
         const createPromises = students
             .filter(s => s.status === 'pending')
-            .map(async (student, index) => {
+            .map(async (student) => {
                 try {
-                    // Create student account
                     const createRes = await fetch('/api/students/create', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -113,8 +120,8 @@ export default function BulkImportPage() {
                             name: student.name,
                             email: student.email,
                             password: 'student123', // Default password
-                            classId: parseInt(selectedClass),
-                            rollNumber: student.rollNumber
+                            classroomId: parseInt(selectedClassroomId),
+                            rollNumber: student.rollNumber // Sent but likely ignored by backend
                         })
                     });
 
@@ -155,7 +162,7 @@ export default function BulkImportPage() {
 
     function reset() {
         setStudents([]);
-        setSelectedClass('');
+        setSelectedClassroomId('');
         setStep('upload');
         if (fileInputRef.current) fileInputRef.current.value = '';
     }
@@ -169,7 +176,10 @@ export default function BulkImportPage() {
         <div className="flex-1 p-4 sm:p-8 bg-[#F5F7FA]">
             <div className="max-w-4xl mx-auto">
                 <h1 className="text-2xl sm:text-3xl font-bold mb-2">Bulk Student Import</h1>
-                <p className="text-gray-500 mb-8">Import students from CSV file</p>
+                <p className="text-gray-500 mb-8 max-w-2xl">
+                    Import students from a CSV file and enroll them directly into a Classroom.
+                    Students will be able to mark attendance for the selected room.
+                </p>
 
                 {/* Steps */}
                 <div className="flex gap-4 mb-8">
@@ -187,17 +197,23 @@ export default function BulkImportPage() {
                         </div>
 
                         <div className="mb-6">
-                            <label className="block text-sm font-medium mb-2">Select Class *</label>
+                            <label className="block text-sm font-medium mb-2">Select Classroom *</label>
                             <select
-                                value={selectedClass}
-                                onChange={(e) => setSelectedClass(e.target.value)}
-                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500"
+                                value={selectedClassroomId}
+                                onChange={(e) => setSelectedClassroomId(e.target.value)}
+                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 bg-white"
                             >
-                                <option value="">Choose a class...</option>
-                                {classes.map(c => (
-                                    <option key={c.id} value={c.id}>{c.name} {c.section || ''}</option>
+                                <option value="">Choose a classroom...</option>
+                                {classrooms.map(c => (
+                                    <option key={c.id} value={c.id}>
+                                        {c.building_name} - Room {c.room_number} (Floor {c.floor_number})
+                                    </option>
                                 ))}
                             </select>
+                            <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+                                <Building2 size={12} />
+                                Students will be assigned to this physical location.
+                            </p>
                         </div>
 
                         <div
@@ -314,6 +330,12 @@ export default function BulkImportPage() {
                             >
                                 Import More
                             </button>
+                            <Link
+                                href="/dashboard/admin/students"
+                                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200"
+                            >
+                                View Students
+                            </Link>
                         </div>
                     </div>
                 )}

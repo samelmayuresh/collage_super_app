@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 
 export async function POST(request: Request) {
     try {
-        const { name, email, password, classId, rollNumber } = await request.json();
+        const { name, email, password, classroomId, rollNumber } = await request.json();
 
         if (!name || !email) {
             return NextResponse.json({ error: 'Name and email required' }, { status: 400 });
@@ -28,13 +28,16 @@ export async function POST(request: Request) {
             studentId = result.rows[0].id;
         }
 
-        // Add to class if classId provided
-        if (classId) {
+        // Add to classroom if classroomId provided
+        if (classroomId) {
+            // We ignore rollNumber for now as student_classrooms doesn't support it
+            // Ideally we'd store it in students table, but for attendance logic it's not strictly required yet.
+
             await appDb.query(
-                `INSERT INTO student_classes (student_id, class_id, roll_number) 
-                 VALUES ($1, $2, $3) 
-                 ON CONFLICT (student_id, class_id) DO UPDATE SET roll_number = $3`,
-                [studentId, classId, rollNumber || null]
+                `INSERT INTO student_classrooms (student_id, classroom_id) 
+                 VALUES ($1, $2) 
+                 ON CONFLICT (student_id, classroom_id) DO NOTHING`,
+                [studentId, parseInt(classroomId)]
             );
         }
 

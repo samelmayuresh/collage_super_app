@@ -123,6 +123,42 @@ export async function removeTeacherFromClassroom(assignmentId: number) {
 
 // ============ STUDENT CLASSROOM ASSIGNMENTS ============
 
+export async function bulkAssignStudentsToClassroom(studentIds: number[], classroomId: number) {
+    const session = await getSession();
+    if (!session || (session.role !== 'ADMIN' && session.role !== 'STAFF')) {
+        return { error: 'Unauthorized' };
+    }
+
+    try {
+        await appDb.query('BEGIN');
+
+        // 1. Get current max roll number for this classroom
+        const maxRes = await appDb.query(
+            'SELECT MAX(roll_number) as max_roll FROM student_classrooms WHERE classroom_id = $1',
+            [classroomId]
+        );
+        let nextRoll = (maxRes.rows[0].max_roll || 0) + 1;
+
+        // 2. Assign students sequentially
+        for (const studentId of studentIds) {
+            await appDb.query(`
+                INSERT INTO student_classrooms (student_id, classroom_id, roll_number)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (student_id, classroom_id) 
+                DO UPDATE SET roll_number = $3
+            `, [studentId, classroomId, nextRoll]);
+            nextRoll++;
+        }
+
+        await appDb.query('COMMIT');
+        return { success: true };
+    } catch (error) {
+        await appDb.query('ROLLBACK');
+        console.error('Bulk assignment error:', error);
+        return { error: 'Failed to assign students' };
+    }
+}
+
 export async function addStudentToClassroom(studentId: number, classroomId: number) {
     const session = await getSession();
     if (!session || (session.role !== 'ADMIN' && session.role !== 'TEACHING')) {
