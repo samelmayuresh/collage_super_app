@@ -102,7 +102,7 @@ export async function getAttendanceAnalytics(filters?: {
     }
 }
 
-export async function getStudentAttendanceStats(classId?: number) {
+export async function getStudentAttendanceStats(classroomId?: number) {
     const session = await getSession();
     if (!session) {
         return { error: 'Unauthorized' };
@@ -113,17 +113,24 @@ export async function getStudentAttendanceStats(classId?: number) {
             SELECT 
                 sc.student_id,
                 sc.roll_number,
-                c.name as class_name,
+                c.room_number,
+                f.floor_number,
+                b.name as building_name,
                 COUNT(ar.id) as present_count,
-                (SELECT COUNT(*) FROM attendance_sessions WHERE class_id = sc.class_id AND ended_at IS NOT NULL) as total_sessions
-            FROM student_classes sc
-            JOIN classes c ON sc.class_id = c.id
-            LEFT JOIN attendance ar ON ar.student_id = sc.student_id AND ar.session_id IN (SELECT id FROM attendance_sessions WHERE class_id = sc.class_id)
-            ${classId ? 'WHERE sc.class_id = $1' : ''}
-            GROUP BY sc.student_id, sc.roll_number, sc.class_id, c.name
-            ORDER BY c.name, sc.roll_number
+                (SELECT COUNT(*) FROM attendance_sessions WHERE classroom_id = sc.classroom_id AND ended_at IS NOT NULL) as total_sessions
+            FROM student_classrooms sc
+            JOIN classrooms c ON sc.classroom_id = c.id
+            JOIN floors f ON c.floor_id = f.id
+            JOIN buildings b ON f.building_id = b.id
+            -- Check attendance for sessions OF THIS classroom
+            LEFT JOIN attendance ar ON ar.student_id = sc.student_id AND ar.session_id IN (
+                SELECT id FROM attendance_sessions WHERE classroom_id = sc.classroom_id AND ended_at IS NOT NULL
+            )
+            ${classroomId ? 'WHERE sc.classroom_id = $1' : ''}
+            GROUP BY sc.student_id, sc.roll_number, sc.classroom_id, c.room_number, f.floor_number, b.name
+            ORDER BY sc.roll_number
         `;
-        const params = classId ? [classId] : [];
+        const params = classroomId ? [classroomId] : [];
         const result = await appDb.query(query, params);
 
         const stats = result.rows;
@@ -148,7 +155,7 @@ export async function getStudentAttendanceStats(classId?: number) {
             email: userMap.get(s.student_id)?.email || ''
         }));
 
-        console.log(`[getStudentAttendanceStats] Class ${classId}: Found ${merged.length} students`);
+        console.log(`[getStudentAttendanceStats] Classroom ${classroomId}: Found ${merged.length} students`);
         return { students: merged };
     } catch (error) {
         console.error('Error fetching student stats:', error);

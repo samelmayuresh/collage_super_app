@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getTeacherSessionsHistory, getSessionAttendanceWithNames } from '../../../../actions/attendance';
-import { getTeacherAssignments } from '../../../../actions/classes';
+import { getTeacherClassrooms } from '../../../../actions/classroomAssignments'; // Updated import
 import { getStudentAttendanceStats } from '../../../../actions/analytics';
 import { History, Calendar, Users, MapPin, Clock, ChevronRight, X, User, Loader2 } from 'lucide-react';
 
@@ -25,6 +25,15 @@ interface AttendanceRecord {
     marked_at: string;
 }
 
+interface Classroom {
+    id: number;
+    classroom_id: number;
+    room_number: string;
+    floor_number: number;
+    building_name: string;
+    subject_name?: string;
+}
+
 export default function TeacherHistoryPage() {
     const [viewMode, setViewMode] = useState<'sessions' | 'class'>('sessions');
 
@@ -35,8 +44,8 @@ export default function TeacherHistoryPage() {
     const [sessions, setSessions] = useState<Session[]>([]);
 
     // Class View State
-    const [classes, setClasses] = useState<any[]>([]);
-    const [selectedClassId, setSelectedClassId] = useState<string>('');
+    const [classrooms, setClassrooms] = useState<Classroom[]>([]);
+    const [selectedClassroomId, setSelectedClassroomId] = useState<string>('');
     const [studentStats, setStudentStats] = useState<any[]>([]);
 
     const [loading, setLoading] = useState(true);
@@ -53,24 +62,28 @@ export default function TeacherHistoryPage() {
     useEffect(() => {
         if (viewMode === 'sessions') {
             loadSessions();
-        } else if (viewMode === 'class' && selectedClassId) {
+        } else if (viewMode === 'class' && selectedClassroomId) {
             loadClassStats();
         }
-    }, [viewMode, selectedDate, selectedClassId]);
+    }, [viewMode, selectedDate, selectedClassroomId]);
 
     async function loadInitialData() {
         setLoading(true);
         const [assignmentsRes] = await Promise.all([
-            getTeacherAssignments(),
+            getTeacherClassrooms(),
             // Load initial sessions
             getTeacherSessionsHistory(selectedDate)
         ]);
 
-        if (assignmentsRes.assignments) {
-            // Extract unique classes
-            const uniqueClasses = Array.from(new Map(assignmentsRes.assignments.map((a: any) => [a.class_id, { id: a.class_id, name: a.class_name, section: a.section }])).values());
-            setClasses(uniqueClasses);
-            if (uniqueClasses.length > 0) setSelectedClassId(uniqueClasses[0].id.toString());
+        if (assignmentsRes.classrooms) {
+            // Map to local interface if needed, or just use directly
+            // The action returns flat objects with classroom_id
+            setClassrooms(assignmentsRes.classrooms);
+
+            if (assignmentsRes.classrooms.length > 0) {
+                // Use classroom_id for selection
+                setSelectedClassroomId(assignmentsRes.classrooms[0].classroom_id.toString());
+            }
         }
 
         // Initial session load handled by state init, but we can set it here too if needed
@@ -88,13 +101,13 @@ export default function TeacherHistoryPage() {
     }
 
     async function loadClassStats() {
-        if (!selectedClassId) return;
+        if (!selectedClassroomId) return;
         setLoading(true);
         setError(null);
         setStudentStats([]); // Reset stats while loading
 
         try {
-            const result = await getStudentAttendanceStats(parseInt(selectedClassId));
+            const result = await getStudentAttendanceStats(parseInt(selectedClassroomId));
             if (result.error) {
                 setError(result.error);
             } else if (result.students) {
@@ -260,15 +273,17 @@ export default function TeacherHistoryPage() {
                         {/* Class Filter */}
                         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-6 flex flex-col sm:flex-row items-center gap-4">
                             <div className="flex-1 w-full">
-                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1 ml-1">Select Class</label>
+                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1 ml-1">Select Classroom</label>
                                 <select
-                                    value={selectedClassId}
-                                    onChange={(e) => setSelectedClassId(e.target.value)}
+                                    value={selectedClassroomId}
+                                    onChange={(e) => setSelectedClassroomId(e.target.value)}
                                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 transition-colors font-medium text-slate-700"
                                 >
-                                    <option value="">-- Choose a Class --</option>
-                                    {classes.map(c => (
-                                        <option key={c.id} value={c.id}>{c.name} {c.section}</option>
+                                    <option value="">-- Choose a Classroom --</option>
+                                    {classrooms.map(c => (
+                                        <option key={c.classroom_id} value={c.classroom_id}>
+                                            {c.building_name} - Room {c.room_number} {c.subject_name ? `(${c.subject_name})` : ''}
+                                        </option>
                                     ))}
                                 </select>
                             </div>
@@ -276,7 +291,36 @@ export default function TeacherHistoryPage() {
 
                         {/* Student Stats Table */}
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[400px]">
-                            {!selectedClassId ? (
+                            {!selectedClassroomId ? (
+                                <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+                                    <Users size={48} className="mb-4 opacity-20" />
+                                    <p>Select a class to view student report</p>
+                                </div>
+                            ) : loading ? (
+                                <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+                                    <Clock className="mb-2 animate-pulse" size={32} />
+                                    <p>Generating report...</p>
+                                </div>
+                            ) : error ? (
+                                <div className="flex flex-col items-center justify-center h-64 text-red-400">
+                                    <p>{error}</p>
+                                    <button
+                                        onClick={loadClassStats}
+                                        className="mt-2 text-sm text-purple-600 hover:underline"
+                                    >
+                                        <option value="">-- Choose a Classroom --</option>
+                                        {classrooms.map(c => (
+                                            <option key={c.classroom_id} value={c.classroom_id}>
+                                                {c.building_name} - Room {c.room_number} {c.subject_name ? `(${c.subject_name})` : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                        {/* Student Stats Table */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[400px]">
+                            {!selectedClassroomId ? (
                                 <div className="flex flex-col items-center justify-center h-64 text-gray-400">
                                     <Users size={48} className="mb-4 opacity-20" />
                                     <p>Select a class to view student report</p>
