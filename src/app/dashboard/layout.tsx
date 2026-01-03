@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { StudentSidebar } from '../../components/dashboard/StudentSidebar';
 import { TeachingSidebar } from '../../components/dashboard/TeachingSidebar';
 import { StaffSidebar } from '../../components/dashboard/StaffSidebar';
+import { AdminSidebar } from '../../components/dashboard/AdminSidebar';
 
 export default async function DashboardLayout({
     children,
@@ -31,7 +32,7 @@ export default async function DashboardLayout({
             {session.role === 'STUDENT' && <StudentSidebar />}
             {session.role === 'TEACHING' && <TeachingSidebar />}
             {session.role === 'STAFF' && <StaffSidebar />}
-            {session.role === 'ADMIN' && <StaffSidebar />}
+            {session.role === 'ADMIN' && <AdminSidebar />}
 
             {/* Main Content Area */}
             <main className="flex-1 flex flex-col overflow-hidden pt-14 lg:pt-0">
