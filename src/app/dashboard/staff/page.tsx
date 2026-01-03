@@ -1,5 +1,6 @@
 import { getSession, getFullProfile } from '../../../actions/auth';
 import { redirect } from 'next/navigation';
+import { Calendar } from '../../../components/dashboard/Calendar';
 import { Building2, Layers, DoorOpen, MapPin, Users, ChevronLeft, ChevronRight, Bell, CheckCircle, Clock, Search as SearchIcon } from 'lucide-react';
 import Link from 'next/link';
 
@@ -120,28 +121,8 @@ export default async function StaffDashboard() {
                     </button>
                 </div>
 
-                {/* Calendar Placeholder */}
-                <div>
-                    <div className="flex justify-between items-center mb-4">
-                        <button className="p-1 hover:bg-gray-100 rounded"><ChevronLeft size={16} /></button>
-                        <h4 className="font-bold text-slate-700">January 2026</h4>
-                        <button className="p-1 hover:bg-gray-100 rounded"><ChevronRight size={16} /></button>
-                    </div>
-                    <div className="bg-white rounded-2xl p-2">
-                        <div className="grid grid-cols-7 text-center text-xs text-gray-400 font-medium mb-2">
-                            <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
-                        </div>
-                        <div className="grid grid-cols-7 text-center text-sm gap-y-2">
-                            <div className="text-gray-300">30</div>
-                            <div className="text-gray-300">31</div>
-                            <div>1</div><div>2</div>
-                            <div className="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center mx-auto shadow-md">3</div>
-                            <div>4</div><div>5</div>
-                            <div>6</div><div>7</div><div>8</div><div>9</div><div>10</div><div>11</div><div>12</div>
-                            <div>13</div><div>14</div><div>15</div><div>16</div><div>17</div><div>18</div><div>19</div>
-                        </div>
-                    </div>
-                </div>
+                {/* Calendar */}
+                <Calendar />
 
                 {/* Recent Activity */}
                 <div>
