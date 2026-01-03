@@ -76,6 +76,14 @@ export function TeachingSidebar() {
                         <span>Notice</span>
                     </Link>
                     <Link
+                        href="/dashboard/teaching/students"
+                        onClick={() => setIsOpen(false)}
+                        className={linkClass}
+                    >
+                        <BookOpen size={20} />
+                        <span>My Students</span>
+                    </Link>
+                    <Link
                         href="/dashboard/teaching/calendar"
                         onClick={() => setIsOpen(false)}
                         className={linkClass}
@@ -159,6 +167,10 @@ export function TeachingSidebar() {
                     <Link href="/dashboard/teaching/notice" className={linkClass}>
                         <FileText size={20} />
                         <span>Notice</span>
+                    </Link>
+                    <Link href="/dashboard/teaching/students" className={linkClass}>
+                        <BookOpen size={20} />
+                        <span>My Students</span>
                     </Link>
                     <Link href="/dashboard/teaching/timetable" className={linkClass}>
                         <BookOpen size={20} />

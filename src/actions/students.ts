@@ -18,7 +18,7 @@ interface Student {
 
 export async function getAllStudents() {
     const session = await getSession();
-    if (!session || (session.role !== 'ADMIN' && session.role !== 'STAFF')) {
+    if (!session || (session.role !== 'ADMIN' && session.role !== 'STAFF' && session.role !== 'TEACHING')) {
         return { error: 'Unauthorized' };
     }
 
