@@ -148,6 +148,7 @@ export async function getStudentAttendanceStats(classId?: number) {
             email: userMap.get(s.student_id)?.email || ''
         }));
 
+        console.log(`[getStudentAttendanceStats] Class ${classId}: Found ${merged.length} students`);
         return { students: merged };
     } catch (error) {
         console.error('Error fetching student stats:', error);

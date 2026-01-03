@@ -44,6 +44,7 @@ export default function TeacherHistoryPage() {
     const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
     const [sessionInfo, setSessionInfo] = useState<any>(null);
     const [loadingAttendance, setLoadingAttendance] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         loadInitialData();
@@ -89,11 +90,21 @@ export default function TeacherHistoryPage() {
     async function loadClassStats() {
         if (!selectedClassId) return;
         setLoading(true);
-        const result = await getStudentAttendanceStats(parseInt(selectedClassId));
-        if (result.students) {
-            setStudentStats(result.students);
+        setError(null);
+        setStudentStats([]); // Reset stats while loading
+
+        try {
+            const result = await getStudentAttendanceStats(parseInt(selectedClassId));
+            if (result.error) {
+                setError(result.error);
+            } else if (result.students) {
+                setStudentStats(result.students);
+            }
+        } catch (err) {
+            setError('Failed to fetch class report');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     }
 
     async function viewSessionDetails(sessionId: number) {
@@ -275,9 +286,21 @@ export default function TeacherHistoryPage() {
                                     <Clock className="mb-2 animate-pulse" size={32} />
                                     <p>Generating report...</p>
                                 </div>
+                            ) : error ? (
+                                <div className="flex flex-col items-center justify-center h-64 text-red-400">
+                                    <p>{error}</p>
+                                    <button
+                                        onClick={loadClassStats}
+                                        className="mt-2 text-sm text-purple-600 hover:underline"
+                                    >
+                                        Try Again
+                                    </button>
+                                </div>
                             ) : studentStats.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-                                    <p>No student data found for this class.</p>
+                                    <Users size={48} className="mb-4 opacity-20" />
+                                    <p>No students are enrolled in this class.</p>
+                                    <p className="text-sm mt-1">Go to "My Students" to enroll students.</p>
                                 </div>
                             ) : (
                                 <div className="overflow-x-auto">
