@@ -31,7 +31,7 @@ export default function FloorsPage() {
     const [settingLocation, setSettingLocation] = useState<number | null>(null);
     const [lat, setLat] = useState('');
     const [lng, setLng] = useState('');
-    const [radius, setRadius] = useState('45');
+    const [radius, setRadius] = useState('100');
     const [gettingGPS, setGettingGPS] = useState(false);
 
     useEffect(() => {
@@ -119,7 +119,7 @@ export default function FloorsPage() {
             setSettingLocation(null);
             setLat('');
             setLng('');
-            setRadius('45');
+            setRadius('100');
             if (selectedBuilding) {
                 await loadFloors(selectedBuilding);
             }
@@ -258,14 +258,14 @@ export default function FloorsPage() {
                                                             />
                                                         </div>
                                                         <div>
-                                                            <label className="text-xs text-gray-500 mb-1 block">Radius (m)</label>
                                                             <input
                                                                 type="number"
                                                                 value={radius}
                                                                 onChange={(e) => setRadius(e.target.value)}
-                                                                placeholder="45"
+                                                                placeholder="100"
                                                                 className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                                                             />
+                                                            <p className="text-[10px] text-orange-600 mt-1">Recommended: 80-150m for indoor GPS stability</p>
                                                         </div>
                                                     </div>
 
@@ -282,7 +282,7 @@ export default function FloorsPage() {
                                                                 setSettingLocation(null);
                                                                 setLat('');
                                                                 setLng('');
-                                                                setRadius('45');
+                                                                setRadius('100');
                                                             }}
                                                             className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
                                                         >
