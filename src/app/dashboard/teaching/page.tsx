@@ -1,8 +1,10 @@
-import { getSession } from '../../../actions/auth';
+import { getSession, getFullProfile } from '../../../actions/auth';
 import { Search, Bell, ChevronLeft, ChevronRight, User, Clock, FileText, CheckCircle, Search as SearchIcon } from 'lucide-react';
 
 export default async function TeachingDashboard() {
     const session = await getSession();
+    const profileResult = await getFullProfile();
+    const profileImage = profileResult.user?.profile_image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${session?.name}`;
 
     return (
         <div className="flex-1 flex overflow-hidden bg-[#F5F7FA]">
@@ -176,7 +178,7 @@ export default async function TeachingDashboard() {
                 {/* Profile */}
                 <div className="flex flex-col items-center">
                     <div className="w-24 h-24 rounded-full bg-blue-100 mb-4 overflow-hidden p-1 border-2 border-dashed border-blue-300">
-                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${session?.name}`} alt="Avatar" className="rounded-full w-full h-full object-cover bg-white" />
+                        <img src={profileImage} alt="Avatar" className="rounded-full w-full h-full object-cover bg-white" />
                     </div>
                     <h3 className="text-xl font-bold text-slate-800">{session?.name}</h3>
                     <p className="text-sm text-gray-500 mb-4">{session?.role}</p>

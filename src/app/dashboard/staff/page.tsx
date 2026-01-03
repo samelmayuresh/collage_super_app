@@ -1,4 +1,4 @@
-import { getSession } from '../../../actions/auth';
+import { getSession, getFullProfile } from '../../../actions/auth';
 import { redirect } from 'next/navigation';
 import { Building2, Layers, DoorOpen, MapPin, Users, ChevronLeft, ChevronRight, Bell, CheckCircle, Clock, Search as SearchIcon } from 'lucide-react';
 import Link from 'next/link';
@@ -9,6 +9,9 @@ export default async function StaffDashboard() {
     if (!session || session.role !== 'STAFF') {
         redirect('/dashboard');
     }
+
+    const profileResult = await getFullProfile();
+    const profileImage = profileResult.user?.profile_image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${session?.name}`;
 
     const cards = [
         { title: 'Buildings', icon: Building2, href: '/dashboard/staff/buildings', color: 'bg-blue-500', desc: 'Manage buildings' },
@@ -108,7 +111,7 @@ export default async function StaffDashboard() {
                 {/* Profile */}
                 <div className="flex flex-col items-center">
                     <div className="w-24 h-24 rounded-full bg-blue-100 mb-4 overflow-hidden p-1 border-2 border-dashed border-blue-300">
-                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${session?.name}`} alt="Avatar" className="rounded-full w-full h-full object-cover bg-white" />
+                        <img src={profileImage} alt="Avatar" className="rounded-full w-full h-full object-cover bg-white" />
                     </div>
                     <h3 className="text-xl font-bold text-slate-800">{session?.name}</h3>
                     <p className="text-sm text-gray-500 mb-4">{session?.role}</p>
