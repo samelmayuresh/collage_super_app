@@ -16,10 +16,8 @@ export function OfficeSidebar() {
         <aside className="w-64 border-r border-gray-200 bg-white flex flex-col hidden lg:flex h-screen sticky top-0">
             {/* Logo */}
             <div className="h-16 flex items-center gap-2 px-6 border-b border-gray-100">
-                <div className="w-8 h-8 bg-black rounded flex items-center justify-center">
-                    <span className="text-white font-bold text-sm">★</span>
-                </div>
-                <span className="font-bold text-xl tracking-tight">College<span className="text-purple-600">Super</span></span>
+                <img src="/logo.png" alt="VARTAK_SA" className="w-8 h-8 object-contain" />
+                <span className="font-bold text-xl tracking-tight">VARTAK_SA</span>
             </div>
 
             {/* Navigation */}

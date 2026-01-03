@@ -16,10 +16,8 @@ export function TeachingSidebar() {
             {/* Mobile Header with Hamburger */}
             <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white px-4 py-3 flex items-center justify-between border-b border-gray-100 shadow-sm">
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                        L
-                    </div>
-                    <span className="font-bold text-lg text-slate-800">Learnthru</span>
+                    <img src="/logo.png" alt="VARTAK_SA" className="w-8 h-8 object-contain" />
+                    <span className="font-bold text-lg text-slate-800">VARTAK_SA</span>
                 </div>
                 <button
                     onClick={() => setIsOpen(!isOpen)}

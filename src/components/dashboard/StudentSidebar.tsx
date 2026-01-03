@@ -13,10 +13,8 @@ export function StudentSidebar() {
             {/* Mobile Header with Hamburger */}
             <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-[#FAEFE9] px-4 py-3 flex items-center justify-between border-b border-orange-100/50">
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                        A
-                    </div>
-                    <span className="font-bold text-lg">CollegeSuperApp</span>
+                    <img src="/logo.png" alt="VARTAK_SA" className="w-8 h-8 object-contain" />
+                    <span className="font-bold text-lg">VARTAK_SA</span>
                 </div>
                 <button
                     onClick={() => setIsOpen(!isOpen)}
