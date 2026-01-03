@@ -23,24 +23,43 @@ export async function getAllStudents() {
     }
 
     try {
-        const result = await authDb.query(`
-            SELECT 
-                u.id, 
-                u.name, 
-                u.email, 
-                u.role, 
-                u.created_at,
-                sc.roll_number,
-                c.name as class_name,
-                c.id as class_id
-            FROM users u
-            LEFT JOIN ${process.env.POSTGRES_DATABASE_APP}.student_classes sc ON u.id = sc.student_id
-            LEFT JOIN ${process.env.POSTGRES_DATABASE_APP}.classes c ON sc.class_id = c.id
-            WHERE u.role = 'STUDENT'
-            ORDER BY u.created_at DESC
+        // 1. Fetch students from Auth DB
+        const usersResult = await authDb.query(`
+            SELECT id, name, email, role, created_at 
+            FROM users 
+            WHERE role = 'STUDENT' 
+            ORDER BY created_at DESC
         `);
+        const students = usersResult.rows;
 
-        return { students: result.rows as Student[] };
+        if (students.length === 0) {
+            return { students: [] };
+        }
+
+        // 2. Fetch enrollment info from App DB for these students
+        const studentIds = students.map(s => s.id);
+        const enrollmentQuery = `
+            SELECT sc.student_id, sc.roll_number, c.name as class_name, c.id as class_id
+            FROM student_classes sc
+            JOIN classes c ON sc.class_id = c.id
+            WHERE sc.student_id = ANY($1)
+        `;
+        const enrollmentResult = await appDb.query(enrollmentQuery, [studentIds]);
+        const enrollments = enrollmentResult.rows;
+
+        // 3. Merge data
+        const mergedStudents = students.map(student => {
+            const enrollment = enrollments.find(e => e.student_id === student.id);
+            return {
+                ...student,
+                roll_number: enrollment ? enrollment.roll_number : null,
+                class_name: enrollment ? enrollment.class_name : null,
+                class_id: enrollment ? enrollment.class_id : null,
+            };
+        });
+
+        return { students: mergedStudents };
+
     } catch (error) {
         console.error('Error fetching students:', error);
         return { error: 'Failed to fetch students' };
