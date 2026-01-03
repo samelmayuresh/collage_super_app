@@ -1,46 +1,44 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Filter, MoreVertical, BookOpen, User, Loader2, Plus, X, CheckCircle, GraduationCap } from 'lucide-react';
+import { Search, Filter, MoreVertical, BookOpen, User, Loader2, Plus, X, CheckCircle, GraduationCap, MapPin, Building2 } from 'lucide-react';
 import { getAllStudents } from '../../../../actions/students';
-import { getTeacherAssignments, addStudentToClass } from '../../../../actions/classes';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { getTeacherClassrooms, addStudentToClassroom, getMyStudents } from '../../../../actions/classroomAssignments';
 
 interface Student {
     id: number;
     name: string;
     email: string;
-    role: string;
-    roll_number: string | null;
-    class_name: string | null;
-    class_id: number | null;
-    created_at: string;
+    // Extra fields for MyStudents view
+    classroom_id?: number;
+    room_number?: string;
+    building_name?: string;
+    // Extra fields for Global view
+    role?: string;
 }
 
-interface Assignment {
-    id: number;
-    teacher_id: number;
-    class_id: number;
-    subject_id: number;
-    class_name: string;
-    section: string;
-    subject_name: string;
-    subject_code: string;
+interface Classroom {
+    id: number; // assignment id, but we need classroom_id
+    classroom_id: number;
+    room_number: string;
+    floor_number: number;
+    building_name: string;
+    subject_name?: string;
 }
 
 export default function TeacherStudentsPage() {
-    const [students, setStudents] = useState<Student[]>([]);
-    const [assignments, setAssignments] = useState<Assignment[]>([]);
+    const [myStudents, setMyStudents] = useState<Student[]>([]);
+    const [allStudents, setAllStudents] = useState<Student[]>([]); // Global list for searching
+    const [myClassrooms, setMyClassrooms] = useState<Classroom[]>([]);
+
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterClassId, setFilterClassId] = useState<string>(''); // Default to first class maybe?
+    const [filterClassroomId, setFilterClassroomId] = useState<string>('');
 
     // Enroll Modal
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
     const [enrollModalOpen, setEnrollModalOpen] = useState(false);
-    const [enrollClassId, setEnrollClassId] = useState('');
-    const [enrollRollNo, setEnrollRollNo] = useState('');
+    const [enrollClassroomId, setEnrollClassroomId] = useState('');
     const [enrolling, setEnrolling] = useState(false);
 
     useEffect(() => {
@@ -49,77 +47,72 @@ export default function TeacherStudentsPage() {
 
     async function loadData() {
         setLoading(true);
-        const [studentsRes, assignmentsRes] = await Promise.all([
-            getAllStudents(),
-            getTeacherAssignments() // Fetches for current teacher
+        const [myStudentsRes, classroomsRes] = await Promise.all([
+            getMyStudents(),
+            getTeacherClassrooms()
         ]);
 
-        if (studentsRes.students) setStudents(studentsRes.students);
-        if (assignmentsRes.assignments) {
-            setAssignments(assignmentsRes.assignments);
-            // Optional: Default filter to their first class? 
-            // setFilterClassId(assignmentsRes.assignments[0]?.class_id.toString() || '');
-        }
+        if (myStudentsRes.students) setMyStudents(myStudentsRes.students);
+        if (classroomsRes.classrooms) setMyClassrooms(classroomsRes.classrooms);
+
+        // Load global students for enrollment search only if needed (lazy load?)
+        // Let's load them initially for simplicity in search
+        const allRes = await getAllStudents();
+        if (allRes.students) setAllStudents(allRes.students);
+
         setLoading(false);
     }
 
-    // Unique classes from assignments (a teacher might have multiple subjects for same class)
-    const myClasses = Array.from(new Map(assignments.map(item => [item.class_id, { id: item.class_id, name: item.class_name, section: item.section }])).values());
+    // Filter logic
+    // If filterClassroomId is set, show only myStudents in that classroom.
+    // If filterClassroomId is "GLOBAL", show allStudents matching search.
+    // If empty, show all myStudents.
 
-    const filteredStudents = students.filter(student => {
-        const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            student.roll_number?.toLowerCase().includes(searchTerm.toLowerCase());
+    const isGlobalSearch = filterClassroomId === 'GLOBAL';
 
-        let matchesClass = true;
-        if (filterClassId === 'ALL_MY') {
-            // Show students in ANY of my classes
-            matchesClass = myClasses.some(c => c.id === student.class_id);
-        } else if (filterClassId && filterClassId !== 'GLOBAL') {
-            // Show students in specific class
-            matchesClass = student.class_id?.toString() === filterClassId;
-        } else if (filterClassId === 'GLOBAL') {
-            // Show all students (no class filter)
-            matchesClass = true;
-        } else {
-            // Default: All My Classes
-            matchesClass = myClasses.some(c => c.id === student.class_id);
-        }
+    const displayedStudents = isGlobalSearch
+        ? allStudents.filter(s =>
+            s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            s.email.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+        : myStudents.filter(s => {
+            const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                s.email.toLowerCase().includes(searchTerm.toLowerCase());
 
-        // If searching, we might want to search GLOBAL automatically if no local match? 
-        // For now, respect the filter.
+            const matchesClass = filterClassroomId
+                ? s.classroom_id?.toString() === filterClassroomId
+                : true;
 
-        return matchesSearch && matchesClass;
-    });
+            return matchesSearch && matchesClass;
+        });
 
     async function handleEnroll() {
-        if (!selectedStudent || !enrollClassId) return;
+        if (!selectedStudent || !enrollClassroomId) return;
 
         setEnrolling(true);
-        const result = await addStudentToClass(selectedStudent.id, parseInt(enrollClassId), enrollRollNo);
+        const result = await addStudentToClassroom(selectedStudent.id, parseInt(enrollClassroomId));
 
         if (result.success) {
             setEnrollModalOpen(false);
-            loadData(); // Refresh list to see update
+            // Refresh my students list
+            const res = await getMyStudents();
+            if (res.students) setMyStudents(res.students);
+
             // Reset fields
-            setEnrollClassId('');
-            setEnrollRollNo('');
+            setEnrollClassroomId('');
+            alert(`Student enrolled successfully!`);
         } else {
-            alert('Failed to enroll student');
+            alert(result.error || 'Failed to enroll student');
         }
         setEnrolling(false);
     }
 
     function openEnrollModal(student: Student) {
         setSelectedStudent(student);
-        // Pre-fill if they are already in one of my classes?
-        // If they are in NO class, clean state
-        // If they are in A class that I teach, pre-select it?
-        const currentClassId = student.class_id?.toString() || '';
-        const isMyClass = myClasses.some(c => c.id.toString() === currentClassId);
-
-        setEnrollClassId(isMyClass ? currentClassId : '');
-        setEnrollRollNo(student.roll_number || '');
+        // Pre-select if they are already in one of my classrooms?
+        // Note: fetchMyStudents returns row per classroom per student. 
+        // But the student object from global list won't have classroom_id set.
+        setEnrollClassroomId('');
         setEnrollModalOpen(true);
     }
 
@@ -137,8 +130,16 @@ export default function TeacherStudentsPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                     <div>
                         <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">My Students</h1>
-                        <p className="text-gray-500">View and manage students in your classes</p>
+                        <p className="text-gray-500">View and manage students in your classrooms</p>
                     </div>
+
+                    <button
+                        onClick={() => setFilterClassroomId('GLOBAL')}
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors"
+                    >
+                        <Plus size={18} />
+                        Enroll New Student
+                    </button>
                 </div>
 
                 {/* Filters */}
@@ -157,15 +158,17 @@ export default function TeacherStudentsPage() {
                         <div className="relative">
                             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                             <select
-                                value={filterClassId}
-                                onChange={(e) => setFilterClassId(e.target.value)}
+                                value={filterClassroomId}
+                                onChange={(e) => setFilterClassroomId(e.target.value)}
                                 className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500 bg-white appearance-none"
                             >
-                                <option value="">All My Classes</option>
-                                <option value="GLOBAL">Show All Students (Global)</option>
+                                <option value="">All My Classrooms</option>
+                                <option value="GLOBAL">Global Directory (Search All)</option>
                                 <hr />
-                                {myClasses.map(c => (
-                                    <option key={c.id} value={c.id}>{c.name} {c.section}</option>
+                                {myClassrooms.map(c => (
+                                    <option key={`${c.classroom_id}-${c.subject_name}`} value={c.classroom_id}>
+                                        {c.building_name} - Room {c.room_number} {c.subject_name ? `(${c.subject_name})` : ''}
+                                    </option>
                                 ))}
                             </select>
                         </div>
@@ -179,34 +182,40 @@ export default function TeacherStudentsPage() {
                             <thead>
                                 <tr className="bg-gray-50 border-b border-gray-100">
                                     <th className="p-4 font-semibold text-gray-600 text-sm">Student</th>
-                                    <th className="p-4 font-semibold text-gray-600 text-sm">Class</th>
-                                    <th className="p-4 font-semibold text-gray-600 text-sm">Roll No</th>
-                                    <th className="p-4 font-semibold text-gray-600 text-sm">Status</th>
-                                    <th className="p-4 font-semibold text-gray-600 text-sm w-10">Action</th>
+                                    <th className="p-4 font-semibold text-gray-600 text-sm">Classroom</th>
+                                    <th className="p-4 font-semibold text-gray-600 text-sm">Action</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
-                                {filteredStudents.length === 0 ? (
+                                {displayedStudents.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="p-8 text-center text-gray-500 flex flex-col items-center justify-center gap-2">
+                                        <td colSpan={3} className="p-12 text-center text-gray-500 flex flex-col items-center justify-center gap-2">
                                             <GraduationCap size={48} className="text-gray-300" />
                                             <p>No students found.</p>
-                                            {filterClassId !== 'GLOBAL' && (
+                                            {!isGlobalSearch && (
                                                 <button
-                                                    onClick={() => setFilterClassId('GLOBAL')}
-                                                    className="text-indigo-600 hover:underline text-sm"
+                                                    onClick={() => setFilterClassroomId('GLOBAL')}
+                                                    className="text-indigo-600 hover:underline text-sm font-medium mt-2"
                                                 >
-                                                    Search in Global Directory
+                                                    Search Global Directory to Enroll
                                                 </button>
                                             )}
                                         </td>
                                     </tr>
                                 ) : (
-                                    filteredStudents.map((student) => {
-                                        const isEnrolledInMyClass = myClasses.some(c => c.id === student.class_id);
+                                    displayedStudents.map((student, idx) => {
+                                        // For global search, student.classroom_id is undefined
+                                        // For myStudents, it is defined.
+
+                                        // Check if already enrolled in ANY of my classrooms (rough check)
+                                        // Ideally we check per classroom but user might belong to multiple.
+                                        // For now, if "Global", we offer "Enroll". 
+                                        // If "My Students", we offer "Edit" (maybe verify enrollment).
+
+                                        const isMyStudent = myStudents.some(ms => ms.id === student.id);
 
                                         return (
-                                            <tr key={student.id} className="hover:bg-gray-50/50 transition-colors">
+                                            <tr key={student.id + '-' + idx} className="hover:bg-gray-50/50 transition-colors">
                                                 <td className="p-4">
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
@@ -219,29 +228,23 @@ export default function TeacherStudentsPage() {
                                                     </div>
                                                 </td>
                                                 <td className="p-4">
-                                                    {student.class_name ? (
-                                                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${isEnrolledInMyClass ? 'bg-indigo-50 text-indigo-700' : 'bg-gray-100 text-gray-600'}`}>
-                                                            {student.class_name}
-                                                        </span>
+                                                    {isGlobalSearch ? (
+                                                        <span className="text-gray-400 text-sm italic">Global Directory</span>
                                                     ) : (
-                                                        <span className="text-gray-400 text-sm italic">Unassigned</span>
+                                                        <div className="flex items-center gap-2 text-sm text-gray-700">
+                                                            <Building2 size={14} className="text-gray-400" />
+                                                            <span>{student.building_name}</span>
+                                                            <span className="text-gray-300">|</span>
+                                                            <span className="font-medium">Room {student.room_number}</span>
+                                                        </div>
                                                     )}
-                                                </td>
-                                                <td className="p-4 font-mono text-sm text-slate-600">
-                                                    {student.roll_number || '-'}
-                                                </td>
-                                                <td className="p-4">
-                                                    <span className="flex items-center gap-1.5 text-green-600 text-sm font-medium">
-                                                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                                                        Active
-                                                    </span>
                                                 </td>
                                                 <td className="p-4">
                                                     <button
                                                         onClick={() => openEnrollModal(student)}
-                                                        className="p-2 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg text-sm font-medium whitespace-nowrap"
+                                                        className="px-3 py-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg text-sm font-medium border border-transparent hover:border-indigo-100 transition-all"
                                                     >
-                                                        {student.class_name ? 'Edit Class' : 'Enroll'}
+                                                        {isGlobalSearch ? 'Enroll' : 'Change / Add'}
                                                     </button>
                                                 </td>
                                             </tr>
@@ -266,32 +269,27 @@ export default function TeacherStudentsPage() {
                         </div>
 
                         <div className="mb-6">
-                            <p className="text-sm text-gray-500 mb-4">Adding <span className="font-bold text-slate-800">{selectedStudent.name}</span> to your class.</p>
+                            <p className="text-sm text-gray-500 mb-4">Adding <span className="font-bold text-slate-800">{selectedStudent.name}</span> to:</p>
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium mb-1">Select Class</label>
+                                    <label className="block text-sm font-medium mb-1">Select Classroom</label>
                                     <select
-                                        value={enrollClassId}
-                                        onChange={(e) => setEnrollClassId(e.target.value)}
-                                        className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500"
+                                        value={enrollClassroomId}
+                                        onChange={(e) => setEnrollClassroomId(e.target.value)}
+                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500 bg-gray-50"
                                     >
-                                        <option value="">Select a class...</option>
-                                        {myClasses.map(c => (
-                                            <option key={c.id} value={c.id}>{c.name} {c.section}</option>
+                                        <option value="">Choose a classroom...</option>
+                                        {myClassrooms.map(c => (
+                                            <option key={`${c.classroom_id}-${c.subject_name}`} value={c.classroom_id}>
+                                                {c.building_name} - Room {c.room_number} {c.subject_name ? `(${c.subject_name})` : ''}
+                                            </option>
                                         ))}
                                     </select>
-                                    <p className="text-xs text-gray-500 mt-1">Only classes you are assigned to are shown.</p>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Roll Number (Optional)</label>
-                                    <input
-                                        type="text"
-                                        value={enrollRollNo}
-                                        onChange={(e) => setEnrollRollNo(e.target.value)}
-                                        placeholder="e.g. 101"
-                                        className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500"
-                                    />
+                                    <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                                        <CheckCircle size={12} className="text-green-500" />
+                                        Student will be able to mark attendance for this room.
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -305,7 +303,7 @@ export default function TeacherStudentsPage() {
                             </button>
                             <button
                                 onClick={handleEnroll}
-                                disabled={enrolling || !enrollClassId}
+                                disabled={enrolling || !enrollClassroomId}
                                 className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
                             >
                                 {enrolling && <Loader2 size={16} className="animate-spin" />}

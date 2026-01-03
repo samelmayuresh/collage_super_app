@@ -1,15 +1,21 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { getBuildings, getFloors, getClassrooms } from '../../../../actions/buildings';
-import { startAttendanceSession, refreshQRToken, endAttendanceSession, getActiveSession, getMyActiveSession, getSessionAttendance } from '../../../../actions/attendance';
-import { getTeacherAssignments } from '../../../../actions/classes';
-import { QrCode, Play, Square, Building2, Layers, DoorOpen, Users, RefreshCw, Loader2, CheckCircle, GraduationCap, Book } from 'lucide-react';
+import { getTeacherClassrooms } from '../../../../actions/classroomAssignments';
+import { startAttendanceSession, refreshQRToken, endAttendanceSession, getMyActiveSession, getSessionAttendance } from '../../../../actions/attendance';
+import { QrCode, Play, Square, Users, RefreshCw, Loader2, GitBranch, MapPin, Book } from 'lucide-react';
 import QRCode from 'qrcode';
 
-interface Building { id: number; name: string; }
-interface Floor { id: number; floor_number: number; }
-interface Classroom { id: number; room_number: string; }
+interface Classroom {
+    id: number; // teacher_classrooms ID (optional, but we use classroom_id)
+    classroom_id: number;
+    room_number: string;
+    floor_number: number;
+    building_name: string;
+    subject_id?: number;
+    subject_name?: string;
+}
+
 interface AttendanceRecord {
     id: number;
     student_id: number;
@@ -18,27 +24,10 @@ interface AttendanceRecord {
     distance_m: number;
     marked_at: string;
 }
-interface Assignment {
-    id: number;
-    class_id: number;
-    subject_id: number;
-    class_name: string;
-    section: string;
-    subject_name: string;
-}
 
 export default function TeacherAttendancePage() {
-    const [buildings, setBuildings] = useState<Building[]>([]);
-    const [floors, setFloors] = useState<Floor[]>([]);
-    const [classrooms, setClassrooms] = useState<Classroom[]>([]);
-    const [selectedBuilding, setSelectedBuilding] = useState<number | null>(null);
-    const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
-    const [selectedClassroom, setSelectedClassroom] = useState<number | null>(null);
-
-    // Class/Subject selection
-    const [assignments, setAssignments] = useState<Assignment[]>([]);
-    const [selectedAcademicClass, setSelectedAcademicClass] = useState<number | null>(null);
-    const [selectedSubject, setSelectedSubject] = useState<number | null>(null);
+    const [myClassrooms, setMyClassrooms] = useState<Classroom[]>([]);
+    const [selectedClassroomId, setSelectedClassroomId] = useState<number | null>(null);
 
     const [activeSession, setActiveSession] = useState<any>(null);
     const [qrToken, setQrToken] = useState<string | null>(null);
@@ -46,45 +35,53 @@ export default function TeacherAttendancePage() {
     const [expiresAt, setExpiresAt] = useState<string | null>(null);
     const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
 
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true); // Initial load
+    const [actionLoading, setActionLoading] = useState(false); // Start/End session
     const [error, setError] = useState<string | null>(null);
     const refreshInterval = useRef<NodeJS.Timeout | null>(null);
     const attendanceInterval = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
-        loadBuildings();
-        loadAssignments();
-        checkActiveSession();
+        loadData();
         return () => {
-            if (refreshInterval.current) clearInterval(refreshInterval.current);
-            if (attendanceInterval.current) clearInterval(attendanceInterval.current);
+            stopIntervals();
         };
     }, []);
 
-    async function loadAssignments() {
-        const result = await getTeacherAssignments();
-        if (result.assignments) setAssignments(result.assignments);
+    async function loadData() {
+        setLoading(true);
+        const [classroomsRes, sessionRes] = await Promise.all([
+            getTeacherClassrooms(),
+            getMyActiveSession()
+        ]);
+
+        if (classroomsRes.classrooms) {
+            setMyClassrooms(classroomsRes.classrooms);
+        }
+
+        if (sessionRes.session) {
+            restoreSession(sessionRes.session);
+        }
+        setLoading(false);
     }
 
-    async function checkActiveSession() {
-        const result = await getMyActiveSession();
-        if (result.session) {
-            // Restore session state
-            const session = result.session;
-            setActiveSession(session);
-            setQrToken(session.qr_token);
-            setExpiresAt(session.expires_at);
+    async function restoreSession(session: any) {
+        setActiveSession(session);
+        setQrToken(session.qr_token);
+        setExpiresAt(session.expires_at);
+        setSelectedClassroomId(session.classroom_id);
 
-            // Fetch live attendance immediately
-            const attResult = await getSessionAttendance(session.id);
-            if (attResult.attendance) setAttendance(attResult.attendance);
+        // Fetch live attendance immediately
+        const attResult = await getSessionAttendance(session.id);
+        if (attResult.attendance) setAttendance(attResult.attendance);
 
-            // Restart intervals
-            startIntervals(session.id);
-        }
+        // Restart intervals
+        startIntervals(session.id);
     }
 
     function startIntervals(sessionId: number) {
+        stopIntervals(); // Clear existing if any
+
         // Start auto-refresh every 18 seconds
         refreshInterval.current = setInterval(async () => {
             const refreshResult = await refreshQRToken(sessionId);
@@ -103,20 +100,10 @@ export default function TeacherAttendancePage() {
         }, 3000);
     }
 
-    useEffect(() => {
-        if (selectedBuilding) {
-            loadFloors(selectedBuilding);
-            setSelectedFloor(null);
-            setSelectedClassroom(null);
-        }
-    }, [selectedBuilding]);
-
-    useEffect(() => {
-        if (selectedFloor) {
-            loadClassrooms(selectedFloor);
-            setSelectedClassroom(null);
-        }
-    }, [selectedFloor]);
+    function stopIntervals() {
+        if (refreshInterval.current) clearInterval(refreshInterval.current);
+        if (attendanceInterval.current) clearInterval(attendanceInterval.current);
+    }
 
     useEffect(() => {
         if (qrToken) {
@@ -124,28 +111,13 @@ export default function TeacherAttendancePage() {
         }
     }, [qrToken]);
 
-    async function loadBuildings() {
-        const result = await getBuildings();
-        if (result.buildings) setBuildings(result.buildings);
-    }
-
-    async function loadFloors(buildingId: number) {
-        const result = await getFloors(buildingId);
-        if (result.floors) setFloors(result.floors);
-    }
-
-    async function loadClassrooms(floorId: number) {
-        const result = await getClassrooms(floorId);
-        if (result.classrooms) setClassrooms(result.classrooms);
-    }
-
     async function generateQRImage(token: string) {
         const payload = JSON.stringify({
             token,
-            ts: Date.now()
+            ts: Date.now() // Timestamp to ensure uniqueness if needed client-side
         });
         const dataUrl = await QRCode.toDataURL(payload, {
-            width: 280,
+            width: 300,
             margin: 2,
             color: { dark: '#000000', light: '#FFFFFF' }
         });
@@ -153,75 +125,65 @@ export default function TeacherAttendancePage() {
     }
 
     async function handleStartSession() {
-        if (!selectedAcademicClass) {
-            setError('Please select a class (e.g. FYIT-A)');
-            return;
-        }
-        if (!selectedClassroom) {
-            setError('Please select a classroom');
-            return;
-        }
+        if (!selectedClassroomId) return;
 
-        setLoading(true);
+        setActionLoading(true);
         setError(null);
-        const result = await startAttendanceSession(selectedClassroom, selectedAcademicClass || undefined, selectedSubject || undefined);
+
+        // Find subject_id for this classroom assignment
+        const selectedClassroom = myClassrooms.find(c => c.classroom_id === selectedClassroomId);
+        const subjectId = selectedClassroom?.subject_id;
+
+        const result = await startAttendanceSession(selectedClassroomId, subjectId);
 
         if (result.error) {
             setError(result.error);
-            setLoading(false);
+            setActionLoading(false);
             return;
         }
 
         setActiveSession(result.session);
         setQrToken(result.qrToken!);
         setExpiresAt(result.expiresAt!);
-        setLoading(false);
 
-        // Start auto-refresh every 18 seconds (before the 20s expiry)
-        refreshInterval.current = setInterval(async () => {
-            const refreshResult = await refreshQRToken(result.session.id);
-            if (refreshResult.qrToken) {
-                setQrToken(refreshResult.qrToken);
-                setExpiresAt(refreshResult.expiresAt!);
-            }
-        }, 18000);
+        startIntervals(result.session.id);
 
-        // Refresh attendance list every 3 seconds
-        attendanceInterval.current = setInterval(async () => {
-            const attResult = await getSessionAttendance(result.session.id);
-            if (attResult.attendance) {
-                setAttendance(attResult.attendance);
-            }
-        }, 3000);
-
-        // Load initial attendance
-        const attResult = await getSessionAttendance(result.session.id);
-        if (attResult.attendance) setAttendance(attResult.attendance);
+        // Load initial attendance (empty usually)
+        setAttendance([]);
+        setActionLoading(false);
     }
 
     async function handleEndSession() {
         if (!activeSession) return;
 
-        if (refreshInterval.current) clearInterval(refreshInterval.current);
-        if (attendanceInterval.current) clearInterval(attendanceInterval.current);
-
+        stopIntervals();
         await endAttendanceSession(activeSession.id);
+
         setActiveSession(null);
         setQrToken(null);
         setQrDataUrl(null);
         setExpiresAt(null);
+        setAttendance([]);
+    }
+
+    if (loading) {
+        return (
+            <div className="flex-1 flex items-center justify-center p-8">
+                <Loader2 className="animate-spin text-blue-500" size={32} />
+            </div>
+        );
     }
 
     return (
-        <div className="flex-1 p-4 sm:p-8">
+        <div className="flex-1 p-4 sm:p-8 bg-[#F5F7FA]">
             <div className="max-w-6xl mx-auto">
                 <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white">
+                    <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white">
                         <QrCode size={20} />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold">Attendance</h1>
-                        <p className="text-gray-500 text-sm">Start a session and show QR code to students</p>
+                        <h1 className="text-2xl font-bold">Classroom Attendance</h1>
+                        <p className="text-gray-500 text-sm">Start a session for your assigned classrooms</p>
                     </div>
                 </div>
 
@@ -229,194 +191,155 @@ export default function TeacherAttendancePage() {
                     {/* Left Column - Controls */}
                     <div className="space-y-4">
                         {!activeSession ? (
-                            <>
-                                {/* Class & Subject Selector */}
-                                <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100">
-                                    <h3 className="font-bold mb-4">Select Class & Subject</h3>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div>
-                                            <label className="text-sm text-gray-500 flex items-center gap-1 mb-1">
-                                                <GraduationCap size={14} /> Class
-                                            </label>
-                                            <select
-                                                value={selectedAcademicClass || ''}
-                                                onChange={(e) => {
-                                                    setSelectedAcademicClass(parseInt(e.target.value));
-                                                    setSelectedSubject(null);
-                                                }}
-                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500"
-                                            >
-                                                <option value="">Choose class...</option>
-                                                {Array.from(new Set(assignments.map(a => a.class_id))).map(classId => {
-                                                    const cls = assignments.find(a => a.class_id === classId);
-                                                    return (
-                                                        <option key={classId} value={classId}>
-                                                            {cls?.class_name} {cls?.section || ''}
-                                                        </option>
-                                                    );
-                                                })}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="text-sm text-gray-500 flex items-center gap-1 mb-1">
-                                                <Book size={14} /> Subject
-                                            </label>
-                                            <select
-                                                value={selectedSubject || ''}
-                                                onChange={(e) => setSelectedSubject(parseInt(e.target.value))}
-                                                disabled={!selectedAcademicClass}
-                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 disabled:opacity-50"
-                                            >
-                                                <option value="">Choose subject...</option>
-                                                {assignments
-                                                    .filter(a => a.class_id === selectedAcademicClass)
-                                                    .map(a => (
-                                                        <option key={a.subject_id} value={a.subject_id}>
-                                                            {a.subject_name}
-                                                        </option>
-                                                    ))
-                                                }
-                                            </select>
-                                        </div>
-                                    </div>
-                                    {assignments.length === 0 && (
-                                        <p className="text-amber-600 text-sm mt-3">⚠️ No class assignments found. Contact admin to assign classes.</p>
-                                    )}
-                                </div>
+                            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                                <h3 className="font-bold mb-4 flex items-center gap-2">
+                                    <MapPin size={20} /> Select Classroom
+                                </h3>
 
-                                {/* Classroom Selector */}
-                                <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100">
-                                    <h3 className="font-bold mb-4">Select Classroom</h3>
-                                    <div className="space-y-3">
-                                        <div>
-                                            <label className="text-sm text-gray-500 flex items-center gap-1 mb-1">
-                                                <Building2 size={14} /> Building
-                                            </label>
-                                            <select
-                                                value={selectedBuilding || ''}
-                                                onChange={(e) => setSelectedBuilding(parseInt(e.target.value))}
-                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500"
-                                            >
-                                                <option value="">Choose building...</option>
-                                                {buildings.map((b) => (
-                                                    <option key={b.id} value={b.id}>{b.name}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="text-sm text-gray-500 flex items-center gap-1 mb-1">
-                                                <Layers size={14} /> Floor
-                                            </label>
-                                            <select
-                                                value={selectedFloor || ''}
-                                                onChange={(e) => setSelectedFloor(parseInt(e.target.value))}
-                                                disabled={!selectedBuilding}
-                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 disabled:opacity-50"
-                                            >
-                                                <option value="">Choose floor...</option>
-                                                {floors.map((f) => (
-                                                    <option key={f.id} value={f.id}>Floor {f.floor_number}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="text-sm text-gray-500 flex items-center gap-1 mb-1">
-                                                <DoorOpen size={14} /> Classroom
-                                            </label>
-                                            <select
-                                                value={selectedClassroom || ''}
-                                                onChange={(e) => setSelectedClassroom(parseInt(e.target.value))}
-                                                disabled={!selectedFloor}
-                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 disabled:opacity-50"
-                                            >
-                                                <option value="">Choose classroom...</option>
-                                                {classrooms.map((c) => (
-                                                    <option key={c.id} value={c.id}>Room {c.room_number}</option>
-                                                ))}
-                                            </select>
-                                        </div>
+                                {myClassrooms.length === 0 ? (
+                                    <div className="text-center py-8 text-gray-500">
+                                        <p>You are not assigned to any classrooms.</p>
+                                        <p className="text-sm mt-2">Contact administrator.</p>
                                     </div>
-                                </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            {myClassrooms.map((c) => (
+                                                <button
+                                                    key={c.classroom_id + '-' + (c.subject_id || 'nosub')}
+                                                    onClick={() => setSelectedClassroomId(c.classroom_id)}
+                                                    className={`w-full p-4 rounded-xl border text-left transition-all ${selectedClassroomId === c.classroom_id
+                                                            ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200'
+                                                            : 'border-gray-200 hover:border-indigo-300 hover:bg-gray-50'
+                                                        }`}
+                                                >
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <div className="font-bold text-gray-800">
+                                                                Room {c.room_number} <span className="font-normal text-gray-500">(Floor {c.floor_number})</span>
+                                                            </div>
+                                                            <div className="text-sm text-gray-500 mt-1">
+                                                                {c.building_name}
+                                                            </div>
+                                                        </div>
+                                                        {c.subject_name && (
+                                                            <span className="flex items-center gap-1 text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-lg font-medium">
+                                                                <Book size={12} />
+                                                                {c.subject_name}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
 
-                                <button
-                                    onClick={handleStartSession}
-                                    disabled={loading || !selectedClassroom || !selectedAcademicClass}
-                                    className="w-full px-6 py-4 bg-green-500 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-green-600 disabled:opacity-50 transition-colors"
-                                >
-                                    {loading ? <Loader2 size={24} className="animate-spin" /> : <Play size={24} />}
-                                    Start Attendance Session
-                                </button>
-                                {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-                            </>
+                                        <button
+                                            onClick={handleStartSession}
+                                            disabled={actionLoading || !selectedClassroomId}
+                                            className="w-full px-6 py-4 bg-green-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-green-600 disabled:opacity-50 transition-colors shadow-sm"
+                                        >
+                                            {actionLoading ? <Loader2 size={24} className="animate-spin" /> : <Play size={24} />}
+                                            Start Session
+                                        </button>
+                                        {error && <p className="text-red-500 text-sm text-center bg-red-50 p-2 rounded-lg">{error}</p>}
+                                    </div>
+                                )}
+                            </div>
                         ) : (
                             <>
                                 {/* Active Session Controls */}
-                                <div className="bg-green-50 border-2 border-green-200 rounded-2xl p-4 sm:p-6">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="flex items-center gap-2 text-green-700">
-                                            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
-                                            <span className="font-bold">Session Active</span>
-                                        </div>
-                                        <div className="text-xs text-green-600 flex items-center gap-1">
-                                            <RefreshCw size={12} className="animate-spin" />
-                                            QR refreshes every 20s
-                                        </div>
+                                <div className="bg-white border-2 border-green-500 rounded-2xl p-6 shadow-sm overflow-hidden relative">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                                        <RefreshCw size={100} className="animate-spin text-green-500" />
                                     </div>
-                                    <button
-                                        onClick={handleEndSession}
-                                        className="w-full px-6 py-3 bg-red-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-600"
-                                    >
-                                        <Square size={20} />
-                                        End Session
-                                    </button>
+
+                                    <div className="flex items-center justify-between mb-6 relative z-10">
+                                        <div>
+                                            <div className="flex items-center gap-2 text-green-600 mb-1">
+                                                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
+                                                <span className="font-bold tracking-wide uppercase text-sm">Session Active</span>
+                                            </div>
+                                            <h2 className="text-2xl font-bold">
+                                                Room {myClassrooms.find(c => c.classroom_id === activeSession.classroom_id)?.room_number || '...'}
+                                            </h2>
+                                        </div>
+                                        <button
+                                            onClick={handleEndSession}
+                                            className="px-4 py-2 bg-red-100 text-red-600 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-red-200 transition-colors text-sm"
+                                        >
+                                            <Square size={16} />
+                                            End
+                                        </button>
+                                    </div>
+
+                                    <div className="bg-green-50 rounded-xl p-4 flex items-center gap-3 mb-2">
+                                        <RefreshCw size={18} className="text-green-600" />
+                                        <p className="text-sm text-green-800 font-medium">QR code refreshes automatically every 20s</p>
+                                    </div>
                                 </div>
 
                                 {/* Attendance List */}
-                                <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100">
-                                    <h3 className="font-bold mb-4 flex items-center gap-2">
+                                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 h-[400px] flex flex-col">
+                                    <h3 className="font-bold mb-4 flex items-center gap-2 text-gray-700">
                                         <Users size={20} />
-                                        Present Students ({attendance.length})
+                                        Present Students <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-xs">{attendance.length}</span>
                                     </h3>
-                                    {attendance.length === 0 ? (
-                                        <p className="text-gray-400 text-center py-4">Waiting for students to scan...</p>
-                                    ) : (
-                                        <div className="space-y-2 max-h-64 overflow-y-auto">
-                                            {attendance.map((a) => (
-                                                <div key={a.id} className="flex items-center justify-between p-3 bg-green-50 rounded-xl">
+
+                                    <div className="flex-1 overflow-y-auto pr-1 space-y-2">
+                                        {attendance.length === 0 ? (
+                                            <div className="h-full flex flex-col items-center justify-center text-gray-400">
+                                                <Users size={48} className="mb-2 opacity-20" />
+                                                <p>Waiting for students...</p>
+                                            </div>
+                                        ) : (
+                                            attendance.map((a) => (
+                                                <div key={a.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 bg-green-200 text-green-800 rounded-full flex items-center justify-center font-bold text-sm">
+                                                        <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-500 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-sm">
                                                             {a.student_name ? a.student_name.charAt(0).toUpperCase() : '#'}
                                                         </div>
                                                         <div>
-                                                            <p className="font-medium">{a.student_name || `Student #${a.student_id}`}</p>
+                                                            <p className="font-medium text-gray-800 text-sm">{a.student_name || 'Student'}</p>
+                                                            <p className="text-xs text-gray-500">{a.student_email}</p>
                                                         </div>
                                                     </div>
-                                                    <span className="text-xs text-gray-500">{a.distance_m}m away</span>
+                                                    <div className="flex flex-col items-end">
+                                                        <span className="text-xs font-mono text-gray-400">{new Date(a.marked_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                        <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                                            <MapPin size={8} /> {a.distance_m}m
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                            ))
+                                        )}
+                                    </div>
                                 </div>
                             </>
                         )}
                     </div>
 
                     {/* Right Column - QR Code */}
-                    <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-100 flex flex-col items-center justify-center min-h-[400px]">
+                    <div className="bg-white rounded-3xl p-8 shadow-lg border border-gray-100 flex flex-col items-center justify-center min-h-[500px] relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
+
                         {qrDataUrl ? (
                             <>
-                                <div className="bg-white p-4 rounded-2xl shadow-lg border-4 border-black mb-4">
-                                    <img src={qrDataUrl} alt="QR Code" className="w-64 h-64" />
+                                <h3 className="text-xl font-bold text-gray-800 mb-6">Scan to Mark Attendance</h3>
+                                <div className="bg-white p-4 rounded-3xl shadow-xl border-8 border-gray-900 mb-8 transform transition-transform hover:scale-105 duration-300">
+                                    <img src={qrDataUrl} alt="QR Code" className="w-64 h-64 sm:w-80 sm:h-80 rendering-pixelated" />
                                 </div>
-                                <p className="text-sm text-gray-500 text-center">
-                                    Show this QR code to students.<br />
-                                    It refreshes automatically every 20 seconds.
-                                </p>
+                                <div className="text-center space-y-2">
+                                    <p className="text-gray-500">Code expires in <span className="font-mono font-bold text-red-500 w-6 inline-block text-left">--</span> seconds</p>
+                                    <p className="text-xs text-gray-400">Ensure you are within the classroom range</p>
+                                </div>
                             </>
                         ) : (
                             <div className="text-center text-gray-400">
-                                <QrCode size={80} className="mx-auto mb-4 opacity-20" />
-                                <p>Start a session to generate QR code</p>
+                                <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <QrCode size={40} className="opacity-20" />
+                                </div>
+                                <h3 className="text-lg font-medium text-gray-600 mb-2">Ready to Start</h3>
+                                <p className="text-sm max-w-xs mx-auto">Select a classroom from the left and click Start Session to generate a secure QR code.</p>
                             </div>
                         )}
                     </div>

@@ -263,4 +263,30 @@ export async function getAllClassroomsWithDetails() {
         console.error('Error fetching classrooms:', error);
         return { error: 'Failed to fetch classrooms' };
     }
+}// ============ TEACHER STUDENTS HELPER ============
+
+export async function getMyStudents() {
+    const session = await getSession();
+    if (!session || session.role !== 'TEACHING') {
+        return { error: 'Unauthorized' };
+    }
+
+    try {
+        const result = await appDb.query(
+            `SELECT DISTINCT u.id, u.name, u.email, c.room_number, c.id as classroom_id, b.name as building_name
+             FROM users u
+             JOIN student_classrooms sc ON u.id = sc.student_id
+             JOIN teacher_classrooms tc ON sc.classroom_id = tc.classroom_id
+             JOIN classrooms c ON sc.classroom_id = c.id
+             JOIN floors f ON c.floor_id = f.id
+             JOIN buildings b ON f.building_id = b.id
+             WHERE tc.teacher_id = $1
+             ORDER BY u.name`,
+            [session.id]
+        );
+        return { students: result.rows };
+    } catch (error) {
+        console.error('Error fetching my students:', error);
+        return { error: 'Failed to fetch students' };
+    }
 }

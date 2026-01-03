@@ -6,13 +6,23 @@ import { haversineDistance, generateQRToken } from '../../lib/geo';
 
 // ============ ATTENDANCE SESSIONS (Teacher) ============
 
-export async function startAttendanceSession(classroomId: number, classId?: number, subjectId?: number) {
+export async function startAttendanceSession(classroomId: number, subjectId?: number) {
     const session = await getSession();
     if (!session || session.role !== 'TEACHING') {
         return { error: 'Unauthorized - Teachers only' };
     }
 
     try {
+        // Verify teacher is assigned to this classroom
+        const assignmentCheck = await appDb.query(
+            'SELECT * FROM teacher_classrooms WHERE teacher_id = $1 AND classroom_id = $2',
+            [session.id, classroomId]
+        );
+
+        if (assignmentCheck.rows.length === 0) {
+            return { error: 'You are not assigned to this classroom.' };
+        }
+
         // Check for existing active session in this classroom
         const existing = await appDb.query(
             'SELECT * FROM attendance_sessions WHERE classroom_id = $1 AND is_active = true',
@@ -41,9 +51,9 @@ export async function startAttendanceSession(classroomId: number, classId?: numb
         const expiresAt = new Date(Date.now() + 20 * 1000); // 20 seconds
 
         const result = await appDb.query(
-            `INSERT INTO attendance_sessions (classroom_id, teacher_id, qr_token, expires_at, class_id, subject_id) 
-             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-            [classroomId, session.id, qrToken, expiresAt, classId || null, subjectId || null]
+            `INSERT INTO attendance_sessions (classroom_id, teacher_id, qr_token, expires_at, subject_id) 
+             VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+            [classroomId, session.id, qrToken, expiresAt, subjectId || null]
         );
 
         return {
