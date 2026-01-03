@@ -156,7 +156,7 @@ export async function updateProfile(formData: FormData) {
         }
 
         // Refresh session with new data
-        const updatedUser = await db.query('SELECT id, name, email, role FROM users WHERE id = $1', [session.id]);
+        const updatedUser = await db.query('SELECT id, name, email, role, profile_image FROM users WHERE id = $1', [session.id]);
         if (updatedUser.rows.length > 0) {
             await createSession(updatedUser.rows[0]);
         }
@@ -168,3 +168,42 @@ export async function updateProfile(formData: FormData) {
     }
 }
 
+export async function updateProfileImage(imageUrl: string) {
+    const session = await getSession();
+    if (!session) {
+        return { error: 'Unauthorized' };
+    }
+
+    try {
+        await db.query('UPDATE users SET profile_image = $1 WHERE id = $2', [imageUrl, session.id]);
+
+        // Refresh session with new data
+        const updatedUser = await db.query('SELECT id, name, email, role, profile_image FROM users WHERE id = $1', [session.id]);
+        if (updatedUser.rows.length > 0) {
+            await createSession(updatedUser.rows[0]);
+        }
+
+        return { success: true, profileImage: imageUrl };
+    } catch (error) {
+        console.error('Error updating profile image:', error);
+        return { error: 'Failed to update profile image' };
+    }
+}
+
+export async function getFullProfile() {
+    const session = await getSession();
+    if (!session) {
+        return { error: 'Unauthorized' };
+    }
+
+    try {
+        const result = await db.query('SELECT id, name, email, role, profile_image FROM users WHERE id = $1', [session.id]);
+        if (result.rows.length === 0) {
+            return { error: 'User not found' };
+        }
+        return { user: result.rows[0] };
+    } catch (error) {
+        console.error('Error fetching profile:', error);
+        return { error: 'Failed to fetch profile' };
+    }
+}

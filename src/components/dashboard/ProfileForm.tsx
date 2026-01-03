@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { updateProfile } from '../../actions/auth';
-import { User, Lock, Mail, Save, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { updateProfile, updateProfileImage, getFullProfile } from '../../actions/auth';
+import { CldUploadWidget } from 'next-cloudinary';
+import { User, Lock, Mail, Save, Loader2, CheckCircle, AlertCircle, Camera } from 'lucide-react';
 
 interface ProfileFormProps {
     user: {
@@ -19,6 +20,34 @@ export function ProfileForm({ user }: ProfileFormProps) {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+    const [profileImage, setProfileImage] = useState<string | null>(null);
+    const [uploadingImage, setUploadingImage] = useState(false);
+
+    useEffect(() => {
+        loadProfile();
+    }, []);
+
+    async function loadProfile() {
+        const result = await getFullProfile();
+        if (result.user?.profile_image) {
+            setProfileImage(result.user.profile_image);
+        }
+    }
+
+    async function handleImageUpload(result: any) {
+        if (result.info?.secure_url) {
+            setUploadingImage(true);
+            const uploadResult = await updateProfileImage(result.info.secure_url);
+            setUploadingImage(false);
+
+            if (uploadResult.success) {
+                setProfileImage(result.info.secure_url);
+                setMessage({ type: 'success', text: 'Profile picture updated!' });
+            } else {
+                setMessage({ type: 'error', text: uploadResult.error || 'Failed to update image' });
+            }
+        }
+    }
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -50,18 +79,51 @@ export function ProfileForm({ user }: ProfileFormProps) {
         }
     }
 
+    const avatarUrl = profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`;
+
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Profile Picture */}
+            {/* Profile Picture with Upload */}
             <div className="flex flex-col items-center mb-8">
-                <div className="w-24 h-24 rounded-full bg-blue-100 mb-4 overflow-hidden p-1 border-2 border-dashed border-blue-300">
-                    <img
-                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
-                        alt="Avatar"
-                        className="rounded-full w-full h-full object-cover bg-white"
-                    />
+                <div className="relative">
+                    <div className="w-24 h-24 rounded-full bg-blue-100 mb-4 overflow-hidden border-2 border-dashed border-blue-300">
+                        {uploadingImage ? (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                                <Loader2 className="animate-spin text-blue-500" size={24} />
+                            </div>
+                        ) : (
+                            <img
+                                src={avatarUrl}
+                                alt="Avatar"
+                                className="w-full h-full object-cover"
+                            />
+                        )}
+                    </div>
+                    <CldUploadWidget
+                        uploadPreset="TICKMAN"
+                        onSuccess={handleImageUpload}
+                        options={{
+                            maxFiles: 1,
+                            sources: ['local', 'camera'],
+                            cropping: true,
+                            croppingAspectRatio: 1,
+                            showSkipCropButton: false,
+                            resourceType: 'image',
+                            folder: 'college_app/profiles'
+                        }}
+                    >
+                        {({ open }) => (
+                            <button
+                                type="button"
+                                onClick={() => open()}
+                                className="absolute bottom-2 right-0 p-2 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-colors"
+                            >
+                                <Camera size={16} />
+                            </button>
+                        )}
+                    </CldUploadWidget>
                 </div>
-                <p className="text-sm text-gray-500">Avatar based on your name</p>
+                <p className="text-sm text-gray-500">Click camera icon to upload</p>
             </div>
 
             {/* Name Field */}

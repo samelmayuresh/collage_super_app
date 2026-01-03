@@ -10,5 +10,6 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT NOT NULL UNIQUE,
   password TEXT NOT NULL,
   role role NOT NULL,
+  profile_image TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
