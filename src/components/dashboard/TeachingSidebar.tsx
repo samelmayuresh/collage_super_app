@@ -100,14 +100,6 @@ export function TeachingSidebar() {
                         <span>Analytics</span>
                     </Link>
                     <Link
-                        href="/dashboard/teaching/timetable"
-                        onClick={() => setIsOpen(false)}
-                        className={linkClass}
-                    >
-                        <BookOpen size={20} />
-                        <span>Timetable</span>
-                    </Link>
-                    <Link
                         href="/dashboard/teaching/quiz"
                         onClick={() => setIsOpen(false)}
                         className={linkClass}
@@ -171,10 +163,6 @@ export function TeachingSidebar() {
                     <Link href="/dashboard/teaching/students" className={linkClass}>
                         <BookOpen size={20} />
                         <span>My Students</span>
-                    </Link>
-                    <Link href="/dashboard/teaching/timetable" className={linkClass}>
-                        <BookOpen size={20} />
-                        <span>Timetable</span>
                     </Link>
                     <Link href="/dashboard/teaching/quiz" className={linkClass}>
                         <Video size={20} />
