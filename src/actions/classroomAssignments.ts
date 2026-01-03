@@ -20,9 +20,9 @@ export async function assignTeacherToClassroom(teacherId: number, classroomId: n
             [teacherId, classroomId, subjectId || null]
         );
         return { success: true, assignment: result.rows[0] };
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error assigning teacher to classroom:', error);
-        return { error: 'Failed to assign teacher' };
+        return { error: 'Failed to assign teacher: ' + (error.message || 'Unknown error') };
     }
 }
 
