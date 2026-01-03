@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Filter, MoreVertical, Shield, User, Loader2, Plus } from 'lucide-react';
+import { Search, Filter, MoreVertical, Shield, User, Loader2, Plus, X, CheckCircle } from 'lucide-react';
 import { getAllStudents } from '../../../../actions/students';
-import { getClasses } from '../../../../actions/classes';
+import { getClasses, addStudentToClass } from '../../../../actions/classes';
 import Link from 'next/link';
 
 interface Student {
@@ -13,6 +13,7 @@ interface Student {
     role: string;
     roll_number: string | null;
     class_name: string | null;
+    class_id: number | null;
     created_at: string;
 }
 
@@ -22,6 +23,13 @@ export default function StudentsPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterClass, setFilterClass] = useState('');
     const [classes, setClasses] = useState<any[]>([]);
+
+    // Class Assignment State
+    const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+    const [assignModalOpen, setAssignModalOpen] = useState(false);
+    const [assignClassId, setAssignClassId] = useState('');
+    const [assignRollNo, setAssignRollNo] = useState('');
+    const [assigning, setAssigning] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -36,7 +44,30 @@ export default function StudentsPage() {
 
         if (studentsRes.students) setStudents(studentsRes.students);
         if (classesRes.classes) setClasses(classesRes.classes);
+        if (classesRes.classes) setClasses(classesRes.classes);
         setLoading(false);
+    }
+
+    async function handleAssignClass() {
+        if (!selectedStudent || !assignClassId) return;
+
+        setAssigning(true);
+        const result = await addStudentToClass(selectedStudent.id, parseInt(assignClassId), assignRollNo);
+
+        if (result.success) {
+            setAssignModalOpen(false);
+            loadData(); // Refresh list
+        } else {
+            alert('Failed to assign class');
+        }
+        setAssigning(false);
+    }
+
+    function openAssignModal(student: Student) {
+        setSelectedStudent(student);
+        setAssignClassId(student.class_id?.toString() || '');
+        setAssignRollNo(student.roll_number || '');
+        setAssignModalOpen(true);
     }
 
     const filteredStudents = students.filter(student => {
@@ -155,8 +186,11 @@ export default function StudentsPage() {
                                                 {new Date(student.created_at).toLocaleDateString()}
                                             </td>
                                             <td className="p-4">
-                                                <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
-                                                    <MoreVertical size={18} />
+                                                <button
+                                                    onClick={() => openAssignModal(student)}
+                                                    className="p-2 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg text-sm font-medium whitespace-nowrap"
+                                                >
+                                                    {student.class_name ? 'Change Class' : 'Assign Class'}
                                                 </button>
                                             </td>
                                         </tr>
@@ -167,6 +201,67 @@ export default function StudentsPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Assign Class Modal */}
+            {assignModalOpen && selectedStudent && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl animate-in fade-in zoom-in duration-200">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-xl font-bold">Assign Class</h2>
+                            <button onClick={() => setAssignModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <div className="mb-6">
+                            <p className="text-sm text-gray-500 mb-4">Assigning <span className="font-bold text-slate-800">{selectedStudent.name}</span> to a class.</p>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Class</label>
+                                    <select
+                                        value={assignClassId}
+                                        onChange={(e) => setAssignClassId(e.target.value)}
+                                        className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500"
+                                    >
+                                        <option value="">Select Class...</option>
+                                        {classes.map(c => (
+                                            <option key={c.id} value={c.id}>{c.name} {c.section}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Roll Number (Optional)</label>
+                                    <input
+                                        type="text"
+                                        value={assignRollNo}
+                                        onChange={(e) => setAssignRollNo(e.target.value)}
+                                        placeholder="e.g. 101"
+                                        className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setAssignModalOpen(false)}
+                                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleAssignClass}
+                                disabled={assigning || !assignClassId}
+                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {assigning && <Loader2 size={16} className="animate-spin" />}
+                                Save Assignment
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
