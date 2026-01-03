@@ -7,8 +7,8 @@ import { getSession } from './auth';
 
 export async function createClass(name: string, section?: string, academicYear?: string) {
     const session = await getSession();
-    if (!session || (session.role !== 'ADMIN' && session.role !== 'STAFF')) {
-        return { error: 'Unauthorized' };
+    if (!session || session.role !== 'STAFF') {
+        return { error: 'Unauthorized - Staff only' };
     }
 
     try {
