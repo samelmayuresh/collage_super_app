@@ -1,0 +1,14 @@
+DO $$ BEGIN
+    CREATE TYPE role AS ENUM ('ADMIN', 'STAFF', 'TEACHING', 'STUDENT');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  password TEXT NOT NULL,
+  role role NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
