@@ -47,10 +47,7 @@ export function AdminSidebar() {
                         <LayoutDashboard size={20} />
                         <span>Dashboard</span>
                     </Link>
-                    <Link href="/dashboard/admin/classrooms" onClick={() => setIsOpen(false)} className={linkClass}>
-                        <DoorOpen size={20} />
-                        <span>Classrooms</span>
-                    </Link>
+
                     <Link href="/dashboard/admin/assignments" onClick={() => setIsOpen(false)} className={linkClass}>
                         <Book size={20} />
                         <span>Assignments</span>
@@ -93,10 +90,7 @@ export function AdminSidebar() {
                         <LayoutDashboard size={20} />
                         <span>Dashboard</span>
                     </Link>
-                    <Link href="/dashboard/admin/classrooms" className={linkClass}>
-                        <DoorOpen size={20} />
-                        <span>Classrooms</span>
-                    </Link>
+
                     <Link href="/dashboard/admin/assignments" className={linkClass}>
                         <Book size={20} />
                         <span>Assignments</span>
