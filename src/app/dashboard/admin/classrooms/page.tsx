@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { getBuildings, getFloors, getClassrooms } from '../../../../actions/buildings';
 import { getSubjects } from '../../../../actions/classes';
-import { assignTeacherToClassroom, getTeacherClassrooms, removeTeacherFromClassroom, getStudentsByClassroom, addStudentToClassroom, removeStudentFromClassroom, getAllClassroomsWithDetails } from '../../../../actions/classroomAssignments';
+import { assignTeacherToClassroom, getTeacherClassrooms, removeTeacherFromClassroom, getStudentsByClassroom, addStudentToClassroom, removeStudentFromClassroom, getAllClassroomsWithDetails, getTeachersByClassroom } from '../../../../actions/classroomAssignments';
 import { getUsersByRole } from '../../../../actions/auth';
-import { DoorOpen, Loader2, Layers, Building2, Users, UserPlus, Trash2, Book } from 'lucide-react';
+import { DoorOpen, Loader2, Layers, Building2, Users, UserPlus, Trash2, Book, GraduationCap } from 'lucide-react';
 
 interface Building { id: number; name: string; }
 interface Floor { id: number; floor_number: number; }
@@ -13,7 +13,7 @@ interface Classroom { id: number; room_number: string; floor_id: number; floor_n
 interface Subject { id: number; name: string; code: string; }
 interface Teacher { id: number; name: string; email: string; }
 interface Student { id: number; name: string; email: string; student_id?: number; }
-interface Assignment { id: number; teacher_id: number; classroom_id: number; subject_id?: number; subject_name?: string; }
+interface Assignment { id: number; teacher_id: number; classroom_id: number; subject_id?: number; subject_name?: string; teacher_name?: string; teacher_email?: string; }
 
 export default function AdminClassroomsPage() {
     const [buildings, setBuildings] = useState<Building[]>([]);
@@ -91,15 +91,13 @@ export default function AdminClassroomsPage() {
     }
 
     async function loadClassroomDetails(classroomId: number) {
-        const [studentsRes] = await Promise.all([
-            getStudentsByClassroom(classroomId)
+        const [studentsRes, teachersRes] = await Promise.all([
+            getStudentsByClassroom(classroomId),
+            getTeachersByClassroom(classroomId)
         ]);
-        if (studentsRes.students) setClassroomStudents(studentsRes.students);
 
-        // Load teachers assigned to this classroom
-        // We need to filter from all teacher assignments
-        // For now, just clear it - we'll load when we have the data
-        setClassroomTeachers([]);
+        if (studentsRes.students) setClassroomStudents(studentsRes.students);
+        if (teachersRes.teachers) setClassroomTeachers(teachersRes.teachers);
     }
 
     async function handleAssignTeacher() {
@@ -113,6 +111,12 @@ export default function AdminClassroomsPage() {
             loadClassroomDetails(selectedClassroom);
         }
         setSubmitting(false);
+    }
+
+    async function handleRemoveTeacher(assignmentId: number) {
+        if (!confirm('Remove this teacher from this classroom?')) return;
+        await removeTeacherFromClassroom(assignmentId);
+        if (selectedClassroom) loadClassroomDetails(selectedClassroom);
     }
 
     async function handleAddStudent() {
@@ -315,6 +319,40 @@ export default function AdminClassroomsPage() {
                                             Assign Teacher
                                         </button>
                                     </div>
+                                </div>
+
+                                {/* Current Teachers */}
+                                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                                    <h2 className="font-bold text-lg mb-4 flex items-center gap-2">
+                                        <GraduationCap size={20} /> Assigned Teachers ({classroomTeachers.length})
+                                    </h2>
+                                    {classroomTeachers.length === 0 ? (
+                                        <p className="text-gray-500 text-center py-4">No teachers assigned</p>
+                                    ) : (
+                                        <div className="grid gap-2">
+                                            {classroomTeachers.map((t) => (
+                                                <div key={t.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                                                    <div className="flex flex-col">
+                                                        <span className="font-medium">{t.teacher_name}</span>
+                                                        <div className="text-sm text-gray-500 flex gap-2">
+                                                            <span>{t.teacher_email}</span>
+                                                            {t.subject_name && (
+                                                                <span className="bg-blue-100 text-blue-700 px-2 rounded-full text-xs flex items-center">
+                                                                    {t.subject_name}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleRemoveTeacher(t.id)}
+                                                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Add Student */}

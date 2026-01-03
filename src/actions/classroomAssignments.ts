@@ -56,6 +56,56 @@ export async function getTeacherClassrooms(teacherId?: number) {
     }
 }
 
+// Get teachers assigned to a specific classroom
+export async function getTeachersByClassroom(classroomId: number) {
+    const session = await getSession();
+    if (!session) {
+        return { error: 'Unauthorized' };
+    }
+
+    try {
+        const result = await appDb.query(
+            `SELECT tc.*, u.name as teacher_name, u.email as teacher_email, s.name as subject_name
+             FROM teacher_classrooms tc
+             -- We need to join with Auth DB users table, but we can't do cross-db joins easily in one query if they are separate.
+             -- However, assuming 'users' table is in authDb, we usually fetch IDs and then fetch users.
+             -- Let's stick to the pattern used in 'getStudentsByClassroom': fetch IDs first.
+             LEFT JOIN subjects s ON tc.subject_id = s.id
+             WHERE tc.classroom_id = $1`,
+            [classroomId]
+        );
+
+        if (result.rows.length === 0) {
+            return { teachers: [] };
+        }
+
+        // Get teacher IDs
+        const teachersList = result.rows;
+        const teacherIds = teachersList.map((t: any) => t.teacher_id);
+
+        // Fetch user details from Auth DB
+        const usersResult = await authDb.query(
+            'SELECT id, name, email FROM users WHERE id = ANY($1)',
+            [teacherIds]
+        );
+
+        // Merge details
+        const teachers = teachersList.map((t: any) => {
+            const user = usersResult.rows.find((u: any) => u.id === t.teacher_id);
+            return {
+                ...t,
+                teacher_name: user?.name || 'Unknown',
+                teacher_email: user?.email || ''
+            };
+        });
+
+        return { teachers };
+    } catch (error) {
+        console.error('Error fetching classroom teachers:', error);
+        return { error: 'Failed to fetch teachers' };
+    }
+}
+
 export async function removeTeacherFromClassroom(assignmentId: number) {
     const session = await getSession();
     if (!session || session.role !== 'ADMIN') {
