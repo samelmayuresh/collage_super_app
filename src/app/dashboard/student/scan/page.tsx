@@ -171,7 +171,7 @@ export default function StudentScanPage() {
                 setMessage(result.error);
             } else {
                 setStatus('success');
-                setMessage(`✅ ${result.message}\n📍 Distance: ${result.distance}m\n🚪 ${result.classroom}`);
+                setMessage(`✅ ${result.message}\n📍 Location: Verified\n🚪 ${result.classroom}`);
                 await loadHistory();
             }
         } catch (error: any) {
@@ -295,7 +295,7 @@ export default function StudentScanPage() {
                                         </div>
                                         <div className="text-right">
                                             <CheckCircle size={20} className="text-green-600" />
-                                            <p className="text-xs text-gray-400">{h.distance_m}m</p>
+                                            {/* <p className="text-xs text-gray-400">{h.distance_m}m</p> */}
                                         </div>
                                     </div>
                                 ))}
