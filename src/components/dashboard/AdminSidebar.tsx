@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, Users, Book, Upload, LogOut, Menu, X, User, Calendar, DoorOpen } from 'lucide-react';
+import { LayoutDashboard, Users, Book, Upload, LogOut, Menu, X, User, Calendar, DoorOpen, GitBranch } from 'lucide-react';
 import { logout } from '../../actions/auth';
 
 export function AdminSidebar() {
@@ -52,6 +52,10 @@ export function AdminSidebar() {
                         <Book size={20} />
                         <span>Assignments</span>
                     </Link>
+                    <Link href="/dashboard/admin/branches" onClick={() => setIsOpen(false)} className={linkClass}>
+                        <GitBranch size={20} />
+                        <span>Branches</span>
+                    </Link>
                     <Link href="/dashboard/admin/timetable" onClick={() => setIsOpen(false)} className={linkClass}>
                         <Calendar size={20} />
                         <span>Timetables</span>
@@ -94,6 +98,10 @@ export function AdminSidebar() {
                     <Link href="/dashboard/admin/assignments" className={linkClass}>
                         <Book size={20} />
                         <span>Assignments</span>
+                    </Link>
+                    <Link href="/dashboard/admin/branches" className={linkClass}>
+                        <GitBranch size={20} />
+                        <span>Branches</span>
                     </Link>
                     <Link href="/dashboard/admin/timetable" className={linkClass}>
                         <Calendar size={20} />

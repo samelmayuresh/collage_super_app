@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { getSubjects } from '../../../../actions/classes';
 import { getBuildings, getFloors, getClassrooms } from '../../../../actions/buildings';
-import { assignTeacherToClassroom, getTeacherClassrooms, removeTeacherFromClassroom, getAllClassroomsWithDetails } from '../../../../actions/classroomAssignments';
-import { Users, GraduationCap, Book, Plus, Trash2, Loader2, Building2, Layers, DoorOpen } from 'lucide-react';
-import { getSession } from '../../../../actions/auth';
+import { assignTeacherToClassroom, getTeacherClassrooms, removeTeacherFromClassroom } from '../../../../actions/classroomAssignments';
+import { getBranches, getAllTeachersWithBranches } from '../../../../actions/branches';
+import { Users, Book, Plus, Trash2, Loader2, Building2, Layers, DoorOpen, GitBranch, Filter } from 'lucide-react';
 
 interface Assignment {
     id: number;
@@ -27,14 +27,9 @@ interface Teacher {
 interface Building { id: number; name: string; }
 interface Floor { id: number; floor_number: number; }
 interface Classroom { id: number; room_number: string; }
+interface Branch { id: number; name: string; }
 
 export default function TeacherAssignmentsPage() {
-    const [assignments, setAssignments] = useState<Assignment[]>([]); // We need a way to fetch ALL assignments, not just for one teacher. 
-    // Currently getTeacherClassrooms takes a teacherID. We might need a new action "getAllAssignments". 
-    // For now, let's fetch individual teacher assignments when we load teachers. 
-    // OR BETTER: Let's create an action to get ALL assignments.
-
-    // Actually, let's just fetch all teachers and iterate.
     const [allAssignments, setAllAssignments] = useState<Record<number, Assignment[]>>({});
 
     const [buildings, setBuildings] = useState<Building[]>([]);
@@ -42,9 +37,12 @@ export default function TeacherAssignmentsPage() {
     const [classrooms, setClassrooms] = useState<Classroom[]>([]);
     const [subjects, setSubjects] = useState<any[]>([]);
     const [teachers, setTeachers] = useState<Teacher[]>([]);
+    const [branches, setBranches] = useState<Branch[]>([]);
+    const [teacherBranches, setTeacherBranches] = useState<Record<number, number>>({});
     const [loading, setLoading] = useState(true);
 
     const [selectedTeacher, setSelectedTeacher] = useState('');
+    const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
     const [selectedBuilding, setSelectedBuilding] = useState<number | null>(null);
     const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
     const [selectedClassroom, setSelectedClassroom] = useState('');
@@ -73,9 +71,11 @@ export default function TeacherAssignmentsPage() {
 
     async function loadData() {
         setLoading(true);
-        const [buildingsRes, subjectsRes] = await Promise.all([
+        const [buildingsRes, subjectsRes, branchesRes, teacherBranchesRes] = await Promise.all([
             getBuildings(),
-            getSubjects()
+            getSubjects(),
+            getBranches(),
+            getAllTeachersWithBranches()
         ]);
 
         const teachersRes = await fetch('/api/teachers');
@@ -83,9 +83,18 @@ export default function TeacherAssignmentsPage() {
 
         if (buildingsRes.buildings) setBuildings(buildingsRes.buildings);
         if (subjectsRes.subjects) setSubjects(subjectsRes.subjects);
+        if (branchesRes.branches) setBranches(branchesRes.branches);
+
+        if (teacherBranchesRes.mappings) {
+            const map: Record<number, number> = {};
+            teacherBranchesRes.mappings.forEach((m: { teacher_id: number; branch_id: number }) => {
+                map[m.teacher_id] = m.branch_id;
+            });
+            setTeacherBranches(map);
+        }
+
         if (teachersData.teachers) {
             setTeachers(teachersData.teachers);
-            // Load assignments for all teachers
             loadAllAssignments(teachersData.teachers);
         }
 
@@ -156,6 +165,11 @@ export default function TeacherAssignmentsPage() {
         }
     }
 
+    // Filter teachers based on selected branch
+    const filteredTeachers = selectedBranch
+        ? teachers.filter(t => teacherBranches[t.id] === selectedBranch)
+        : teachers;
+
     if (loading) {
         return (
             <div className="flex-1 flex items-center justify-center">
@@ -167,8 +181,30 @@ export default function TeacherAssignmentsPage() {
     return (
         <div className="flex-1 p-4 sm:p-8 bg-[#F5F7FA]">
             <div className="max-w-5xl mx-auto">
-                <h1 className="text-2xl sm:text-3xl font-bold mb-2">Teacher Assignments</h1>
-                <p className="text-gray-500 mb-8">Assign teachers to classrooms and subjects (Building &gt; Floor &gt; Classroom)</p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                    <div>
+                        <h1 className="text-2xl sm:text-3xl font-bold mb-2">Teacher Assignments</h1>
+                        <p className="text-gray-500">Assign teachers to classrooms and subjects</p>
+                    </div>
+
+                    {/* Branch Filter */}
+                    <div className="bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3">
+                        <Filter size={16} className="text-gray-400" />
+                        <select
+                            value={selectedBranch || ''}
+                            onChange={(e) => {
+                                setSelectedBranch(e.target.value ? parseInt(e.target.value) : null);
+                                setSelectedTeacher(''); // Reset teacher when branch changes
+                            }}
+                            className="bg-transparent border-none focus:outline-none text-sm font-medium text-gray-700 min-w-[150px]"
+                        >
+                            <option value="">All Branches</option>
+                            {branches.map(b => (
+                                <option key={b.id} value={b.id}>{b.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
 
                 {/* Assign Form */}
                 <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
@@ -178,17 +214,22 @@ export default function TeacherAssignmentsPage() {
                     <form onSubmit={handleAssign} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
                         {/* Teacher */}
                         <div className="md:col-span-1">
-                            <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Teacher</label>
+                            <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">
+                                {selectedBranch ? 'Teacher (Filtered)' : 'Teacher'}
+                            </label>
                             <select
                                 value={selectedTeacher}
                                 onChange={(e) => setSelectedTeacher(e.target.value)}
                                 className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-blue-500"
                             >
                                 <option value="">Select Teacher</option>
-                                {teachers.map((t) => (
+                                {filteredTeachers.map((t) => (
                                     <option key={t.id} value={t.id}>{t.name}</option>
                                 ))}
                             </select>
+                            {selectedBranch && filteredTeachers.length === 0 && (
+                                <p className="text-xs text-red-500 mt-1">No teachers in this branch</p>
+                            )}
                         </div>
 
                         {/* Location Selectors */}
@@ -273,6 +314,10 @@ export default function TeacherAssignmentsPage() {
                     ) : (
                         <div className="space-y-6">
                             {Object.entries(allAssignments).map(([teacherId, teacherAssignments]) => {
+                                // Filter display based on branch too? Maybe not necessary, but good for focus.
+                                // If branch selected, only show teachers in that branch.
+                                if (selectedBranch && teacherBranches[parseInt(teacherId)] !== selectedBranch) return null;
+
                                 if (teacherAssignments.length === 0) return null;
                                 const teacher = teachers.find(t => t.id === parseInt(teacherId));
                                 return (
@@ -282,6 +327,14 @@ export default function TeacherAssignmentsPage() {
                                                 {teacher?.name?.charAt(0) || 'T'}
                                             </div>
                                             {teacher?.name || `Teacher #${teacherId}`}
+
+                                            {/* Show Branch Badge */}
+                                            {teacherBranches[parseInt(teacherId)] && (
+                                                <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full flex items-center gap-1 font-normal">
+                                                    <GitBranch size={12} />
+                                                    {branches.find(b => b.id === teacherBranches[parseInt(teacherId)])?.code || 'Branch'}
+                                                </span>
+                                            )}
                                         </h3>
                                         <div className="grid gap-2">
                                             {teacherAssignments.map((a) => (
