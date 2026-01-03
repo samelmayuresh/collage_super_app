@@ -153,6 +153,10 @@ export default function TeacherAttendancePage() {
     }
 
     async function handleStartSession() {
+        if (!selectedAcademicClass) {
+            setError('Please select a class (e.g. FYIT-A)');
+            return;
+        }
         if (!selectedClassroom) {
             setError('Please select a classroom');
             return;
@@ -336,7 +340,7 @@ export default function TeacherAttendancePage() {
 
                                 <button
                                     onClick={handleStartSession}
-                                    disabled={loading || !selectedClassroom}
+                                    disabled={loading || !selectedClassroom || !selectedAcademicClass}
                                     className="w-full px-6 py-4 bg-green-500 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-green-600 disabled:opacity-50 transition-colors"
                                 >
                                     {loading ? <Loader2 size={24} className="animate-spin" /> : <Play size={24} />}
