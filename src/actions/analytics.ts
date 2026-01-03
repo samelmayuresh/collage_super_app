@@ -1,6 +1,6 @@
 'use server';
 
-import { appDb } from '../../lib/db';
+import { appDb, authDb } from '../../lib/db';
 import { getSession } from './auth';
 
 // ============ ATTENDANCE ANALYTICS ============
@@ -47,7 +47,7 @@ export async function getAttendanceAnalytics(filters?: {
         // Get attendance records count
         let recordsQuery = `
             SELECT COUNT(*) as total_records
-            FROM attendance_records ar
+            FROM attendance ar
             JOIN attendance_sessions s ON ar.session_id = s.id
             WHERE 1=1
         `;
@@ -64,7 +64,7 @@ export async function getAttendanceAnalytics(filters?: {
         // Get daily attendance for chart (last 30 days)
         const dailyQuery = `
             SELECT DATE(ar.marked_at) as date, COUNT(*) as count
-            FROM attendance_records ar
+            FROM attendance ar
             JOIN attendance_sessions s ON ar.session_id = s.id
             WHERE ar.marked_at >= NOW() - INTERVAL '30 days'
             ${session.role === 'TEACHING' ? 'AND s.teacher_id = $1' : ''}
@@ -77,7 +77,7 @@ export async function getAttendanceAnalytics(filters?: {
         // Get class-wise attendance
         const classWiseQuery = `
             SELECT c.name as class_name, COUNT(ar.id) as attendance_count
-            FROM attendance_records ar
+            FROM attendance ar
             JOIN attendance_sessions s ON ar.session_id = s.id
             JOIN classes c ON s.class_id = c.id
             WHERE s.class_id IS NOT NULL
@@ -118,7 +118,7 @@ export async function getStudentAttendanceStats(classId?: number) {
                 (SELECT COUNT(*) FROM attendance_sessions WHERE class_id = sc.class_id AND ended_at IS NOT NULL) as total_sessions
             FROM student_classes sc
             JOIN classes c ON sc.class_id = c.id
-            LEFT JOIN attendance_records ar ON ar.student_id = sc.student_id
+            LEFT JOIN attendance ar ON ar.student_id = sc.student_id AND ar.session_id IN (SELECT id FROM attendance_sessions WHERE class_id = sc.class_id)
             ${classId ? 'WHERE sc.class_id = $1' : ''}
             GROUP BY sc.student_id, sc.roll_number, sc.class_id, c.name
             ORDER BY c.name, sc.roll_number
@@ -126,7 +126,29 @@ export async function getStudentAttendanceStats(classId?: number) {
         const params = classId ? [classId] : [];
         const result = await appDb.query(query, params);
 
-        return { students: result.rows };
+        const stats = result.rows;
+        if (stats.length === 0) return { students: [] };
+
+        // Fetch student names from Auth DB
+        const studentIds = stats.map((s: any) => s.student_id);
+        const usersRes = await authDb.query(
+            `SELECT id, name, email FROM users WHERE id = ANY($1)`,
+            [studentIds]
+        );
+
+        const userMap = new Map();
+        usersRes.rows.forEach((u: any) => {
+            userMap.set(u.id, u);
+        });
+
+        // Merge
+        const merged = stats.map((s: any) => ({
+            ...s,
+            name: userMap.get(s.student_id)?.name || 'Unknown',
+            email: userMap.get(s.student_id)?.email || ''
+        }));
+
+        return { students: merged };
     } catch (error) {
         console.error('Error fetching student stats:', error);
         return { error: 'Failed to fetch student stats' };
