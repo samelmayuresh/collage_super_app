@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { getBuildings, getFloors, getClassrooms } from '../../../../actions/buildings';
 import { startAttendanceSession, refreshQRToken, endAttendanceSession, getActiveSession, getMyActiveSession, getSessionAttendance } from '../../../../actions/attendance';
-import { QrCode, Play, Square, Building2, Layers, DoorOpen, Users, RefreshCw, Loader2, CheckCircle } from 'lucide-react';
+import { getTeacherAssignments } from '../../../../actions/classes';
+import { QrCode, Play, Square, Building2, Layers, DoorOpen, Users, RefreshCw, Loader2, CheckCircle, GraduationCap, Book } from 'lucide-react';
 import QRCode from 'qrcode';
 
 interface Building { id: number; name: string; }
@@ -17,6 +18,14 @@ interface AttendanceRecord {
     distance_m: number;
     marked_at: string;
 }
+interface Assignment {
+    id: number;
+    class_id: number;
+    subject_id: number;
+    class_name: string;
+    section: string;
+    subject_name: string;
+}
 
 export default function TeacherAttendancePage() {
     const [buildings, setBuildings] = useState<Building[]>([]);
@@ -25,6 +34,11 @@ export default function TeacherAttendancePage() {
     const [selectedBuilding, setSelectedBuilding] = useState<number | null>(null);
     const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
     const [selectedClassroom, setSelectedClassroom] = useState<number | null>(null);
+
+    // Class/Subject selection
+    const [assignments, setAssignments] = useState<Assignment[]>([]);
+    const [selectedAcademicClass, setSelectedAcademicClass] = useState<number | null>(null);
+    const [selectedSubject, setSelectedSubject] = useState<number | null>(null);
 
     const [activeSession, setActiveSession] = useState<any>(null);
     const [qrToken, setQrToken] = useState<string | null>(null);
@@ -39,12 +53,18 @@ export default function TeacherAttendancePage() {
 
     useEffect(() => {
         loadBuildings();
+        loadAssignments();
         checkActiveSession();
         return () => {
             if (refreshInterval.current) clearInterval(refreshInterval.current);
             if (attendanceInterval.current) clearInterval(attendanceInterval.current);
         };
     }, []);
+
+    async function loadAssignments() {
+        const result = await getTeacherAssignments();
+        if (result.assignments) setAssignments(result.assignments);
+    }
 
     async function checkActiveSession() {
         const result = await getMyActiveSession();
@@ -140,7 +160,7 @@ export default function TeacherAttendancePage() {
 
         setLoading(true);
         setError(null);
-        const result = await startAttendanceSession(selectedClassroom);
+        const result = await startAttendanceSession(selectedClassroom, selectedAcademicClass || undefined, selectedSubject || undefined);
 
         if (result.error) {
             setError(result.error);
@@ -206,6 +226,60 @@ export default function TeacherAttendancePage() {
                     <div className="space-y-4">
                         {!activeSession ? (
                             <>
+                                {/* Class & Subject Selector */}
+                                <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100">
+                                    <h3 className="font-bold mb-4">Select Class & Subject</h3>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="text-sm text-gray-500 flex items-center gap-1 mb-1">
+                                                <GraduationCap size={14} /> Class
+                                            </label>
+                                            <select
+                                                value={selectedAcademicClass || ''}
+                                                onChange={(e) => {
+                                                    setSelectedAcademicClass(parseInt(e.target.value));
+                                                    setSelectedSubject(null);
+                                                }}
+                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500"
+                                            >
+                                                <option value="">Choose class...</option>
+                                                {Array.from(new Set(assignments.map(a => a.class_id))).map(classId => {
+                                                    const cls = assignments.find(a => a.class_id === classId);
+                                                    return (
+                                                        <option key={classId} value={classId}>
+                                                            {cls?.class_name} {cls?.section || ''}
+                                                        </option>
+                                                    );
+                                                })}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-sm text-gray-500 flex items-center gap-1 mb-1">
+                                                <Book size={14} /> Subject
+                                            </label>
+                                            <select
+                                                value={selectedSubject || ''}
+                                                onChange={(e) => setSelectedSubject(parseInt(e.target.value))}
+                                                disabled={!selectedAcademicClass}
+                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 disabled:opacity-50"
+                                            >
+                                                <option value="">Choose subject...</option>
+                                                {assignments
+                                                    .filter(a => a.class_id === selectedAcademicClass)
+                                                    .map(a => (
+                                                        <option key={a.subject_id} value={a.subject_id}>
+                                                            {a.subject_name}
+                                                        </option>
+                                                    ))
+                                                }
+                                            </select>
+                                        </div>
+                                    </div>
+                                    {assignments.length === 0 && (
+                                        <p className="text-amber-600 text-sm mt-3">⚠️ No class assignments found. Contact admin to assign classes.</p>
+                                    )}
+                                </div>
+
                                 {/* Classroom Selector */}
                                 <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100">
                                     <h3 className="font-bold mb-4">Select Classroom</h3>

@@ -6,7 +6,7 @@ import { haversineDistance, generateQRToken } from '../../lib/geo';
 
 // ============ ATTENDANCE SESSIONS (Teacher) ============
 
-export async function startAttendanceSession(classroomId: number) {
+export async function startAttendanceSession(classroomId: number, classId?: number, subjectId?: number) {
     const session = await getSession();
     if (!session || session.role !== 'TEACHING') {
         return { error: 'Unauthorized - Teachers only' };
@@ -41,9 +41,9 @@ export async function startAttendanceSession(classroomId: number) {
         const expiresAt = new Date(Date.now() + 20 * 1000); // 20 seconds
 
         const result = await appDb.query(
-            `INSERT INTO attendance_sessions (classroom_id, teacher_id, qr_token, expires_at) 
-             VALUES ($1, $2, $3, $4) RETURNING *`,
-            [classroomId, session.id, qrToken, expiresAt]
+            `INSERT INTO attendance_sessions (classroom_id, teacher_id, qr_token, expires_at, class_id, subject_id) 
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+            [classroomId, session.id, qrToken, expiresAt, classId || null, subjectId || null]
         );
 
         return {
