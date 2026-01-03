@@ -1,24 +1,17 @@
 import { getSession } from '../actions/auth';
-import { redirect } from 'next/navigation';
-import { BookOpen, Users, Calendar, Award, GraduationCap, Briefcase } from 'lucide-react';
+import { BookOpen, Users, Calendar, Award, GraduationCap } from 'lucide-react';
 import Link from 'next/link';
 
 export default async function Home() {
   const session = await getSession();
-
-  if (session) {
-    redirect('/dashboard');
-  }
 
   return (
     <div className="min-h-screen bg-[#F3F3F3] text-slate-900 font-sans">
       {/* Header */}
       <header className="flex items-center justify-between px-8 lg:px-16 py-6">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-black rounded flex items-center justify-center">
-            <span className="text-white font-bold text-sm">★</span>
-          </div>
-          <span className="font-bold text-xl">CollegeSuperApp</span>
+          <img src="/logo.png" alt="VARTAK_SA Logo" className="w-10 h-10 object-contain" />
+          <span className="font-bold text-xl">VARTAK_SA</span>
         </div>
 
         <nav className="hidden md:flex items-center gap-8 text-sm">
@@ -29,14 +22,25 @@ export default async function Home() {
           <Link href="#" className="hover:underline underline-offset-4">Blog</Link>
         </nav>
 
-        {/* Login Button - 3D Style (Right Side) */}
-        <Link href="/signin" className="group">
-          <button className="bg-black rounded-xl cursor-pointer border-none font-bold text-base">
-            <span className="block border-2 border-black rounded-xl px-5 py-2 bg-[#e8e8e8] text-black transform -translate-y-1 group-hover:-translate-y-1.5 group-active:translate-y-0 transition-transform duration-100">
-              Login
-            </span>
-          </button>
-        </Link>
+        {/* Header Right Actions */}
+        <div className="flex items-center gap-4">
+          <Link href="/admission/register" className="group">
+            <button className="bg-black rounded-xl cursor-pointer border-none font-bold text-base">
+              <span className="block border-2 border-black rounded-xl px-4 py-2 bg-[#B9FF66] text-black transform -translate-y-1 group-hover:-translate-y-1.5 group-active:translate-y-0 transition-transform duration-100">
+                New Enroll
+              </span>
+            </button>
+          </Link>
+
+          {/* Login/Dashboard Button - 3D Style (Right Side) */}
+          <Link href={session ? "/dashboard" : "/signin"} className="group">
+            <button className="bg-black rounded-xl cursor-pointer border-none font-bold text-base">
+              <span className="block border-2 border-black rounded-xl px-5 py-2 bg-[#e8e8e8] text-black transform -translate-y-1 group-hover:-translate-y-1.5 group-active:translate-y-0 transition-transform duration-100">
+                {session ? "Dashboard" : "Login"}
+              </span>
+            </button>
+          </Link>
+        </div>
       </header>
 
       {/* Hero Section */}
@@ -276,10 +280,8 @@ export default async function Home() {
         <div className="flex flex-col md:flex-row justify-between items-start gap-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-white rounded flex items-center justify-center">
-                <span className="text-black font-bold text-sm">★</span>
-              </div>
-              <span className="font-bold text-xl">CollegeSuperApp</span>
+              <img src="/logo.png" alt="VARTAK_SA Logo" className="w-10 h-10 object-contain bg-white rounded-lg p-1" />
+              <span className="font-bold text-xl">VARTAK_SA</span>
             </div>
             <p className="text-gray-400 text-sm max-w-xs">
               Empowering students to achieve academic excellence through innovative technology.
@@ -305,7 +307,7 @@ export default async function Home() {
           </div>
         </div>
         <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-500 text-sm">
-          © 2024 CollegeSuperApp. All rights reserved.
+          © 2024 VARTAK_SA. All rights reserved.
         </div>
       </footer>
     </div>

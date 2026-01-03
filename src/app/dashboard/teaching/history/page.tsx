@@ -56,6 +56,7 @@ export default function TeacherHistoryPage() {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+        console.log('TeacherHistoryPage mounted');
         loadInitialData();
     }, []);
 
@@ -289,34 +290,7 @@ export default function TeacherHistoryPage() {
                             </div>
                         </div>
 
-                        {/* Student Stats Table */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[400px]">
-                            {!selectedClassroomId ? (
-                                <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-                                    <Users size={48} className="mb-4 opacity-20" />
-                                    <p>Select a class to view student report</p>
-                                </div>
-                            ) : loading ? (
-                                <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-                                    <Clock className="mb-2 animate-pulse" size={32} />
-                                    <p>Generating report...</p>
-                                </div>
-                            ) : error ? (
-                                <div className="flex flex-col items-center justify-center h-64 text-red-400">
-                                    <p>{error}</p>
-                                    <button
-                                        onClick={loadClassStats}
-                                        className="mt-2 text-sm text-purple-600 hover:underline"
-                                    >
-                                        <option value="">-- Choose a Classroom --</option>
-                                        {classrooms.map(c => (
-                                            <option key={c.classroom_id} value={c.classroom_id}>
-                                                {c.building_name} - Room {c.room_number} {c.subject_name ? `(${c.subject_name})` : ''}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
+
 
                         {/* Student Stats Table */}
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[400px]">

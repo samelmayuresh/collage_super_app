@@ -16,6 +16,10 @@ export default async function DashboardPage() {
         redirect('/dashboard/teaching');
     } else if (session.role === 'STUDENT') {
         redirect('/dashboard/student');
+    } else if (session.role === 'OFFICE_STAFF') {
+        redirect('/dashboard/office');
+    } else if (session.role === 'APPLICANT') {
+        redirect('/dashboard/applicant');
     }
 
     return (

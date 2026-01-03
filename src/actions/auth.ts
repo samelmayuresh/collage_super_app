@@ -101,7 +101,7 @@ export async function getSession(): Promise<SessionUser | null> {
     }
 }
 
-async function createSession(user: any) {
+export async function createSession(user: any) {
     const expires = new Date(Date.now() + 60 * 60 * 1000 * 24); // 1 day
     const session = await new SignJWT({ ...user })
         .setProtectedHeader({ alg: 'HS256' })

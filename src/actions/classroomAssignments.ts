@@ -308,19 +308,54 @@ export async function getMyStudents() {
     }
 
     try {
+        // 1. Get enrollments for classrooms taught by this teacher
         const result = await appDb.query(
-            `SELECT DISTINCT u.id, u.name, u.email, c.room_number, c.id as classroom_id, b.name as building_name
-             FROM users u
-             JOIN student_classrooms sc ON u.id = sc.student_id
-             JOIN teacher_classrooms tc ON sc.classroom_id = tc.classroom_id
-             JOIN classrooms c ON sc.classroom_id = c.id
+            `SELECT sc.student_id, sc.classroom_id, sc.roll_number,
+                    c.room_number, f.floor_number, b.name as building_name,
+                    s.name as subject_name
+             FROM teacher_classrooms tc
+             JOIN classrooms c ON tc.classroom_id = c.id
              JOIN floors f ON c.floor_id = f.id
              JOIN buildings b ON f.building_id = b.id
+             LEFT JOIN subjects s ON tc.subject_id = s.id
+             JOIN student_classrooms sc ON sc.classroom_id = c.id
              WHERE tc.teacher_id = $1
-             ORDER BY u.name`,
+             ORDER BY b.name, f.floor_number, c.room_number, sc.roll_number`,
             [session.id]
         );
-        return { students: result.rows };
+
+        const enrollments = result.rows;
+
+        if (enrollments.length === 0) {
+            return { students: [] };
+        }
+
+        // 2. Fetch student details from Auth DB
+        const studentIds = Array.from(new Set(enrollments.map((e: any) => e.student_id)));
+        const usersResult = await authDb.query(
+            'SELECT id, name, email FROM users WHERE id = ANY($1)',
+            [studentIds]
+        );
+
+        const userMap = new Map();
+        usersResult.rows.forEach((u: any) => userMap.set(u.id, u));
+
+        // 3. Merge data
+        const students = enrollments.map((e: any) => {
+            const user = userMap.get(e.student_id);
+            return {
+                id: e.student_id,
+                name: user?.name || 'Unknown',
+                email: user?.email || '',
+                classroom_id: e.classroom_id,
+                room_number: e.room_number,
+                building_name: e.building_name,
+                subject_name: e.subject_name,
+                roll_number: e.roll_number
+            };
+        });
+
+        return { students };
     } catch (error) {
         console.error('Error fetching my students:', error);
         return { error: 'Failed to fetch students' };
