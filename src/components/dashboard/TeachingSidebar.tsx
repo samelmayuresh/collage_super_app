@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, Users, BookOpen, Video, FileText, Settings, HelpCircle, LogOut, Menu, X, History, User, Calendar } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, Video, FileText, Settings, HelpCircle, LogOut, Menu, X, History, User, Calendar, BarChart3 } from 'lucide-react';
 import { logout } from '../../actions/auth';
 
 export function TeachingSidebar() {
@@ -74,6 +74,22 @@ export function TeachingSidebar() {
                     >
                         <FileText size={20} />
                         <span>Notice</span>
+                    </Link>
+                    <Link
+                        href="/dashboard/teaching/calendar"
+                        onClick={() => setIsOpen(false)}
+                        className={linkClass}
+                    >
+                        <Calendar size={20} />
+                        <span>Calendar</span>
+                    </Link>
+                    <Link
+                        href="/dashboard/teaching/analytics"
+                        onClick={() => setIsOpen(false)}
+                        className={linkClass}
+                    >
+                        <BarChart3 size={20} />
+                        <span>Analytics</span>
                     </Link>
                     <Link
                         href="/dashboard/teaching/timetable"

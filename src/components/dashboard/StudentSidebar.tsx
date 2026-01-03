@@ -57,7 +57,7 @@ export function StudentSidebar() {
                         <span className="font-medium">Scan QR</span>
                     </Link>
                     <Link
-                        href="#"
+                        href="/dashboard/student/calendar"
                         onClick={() => setIsOpen(false)}
                         className="flex items-center gap-3 p-3 text-gray-600 hover:bg-white rounded-xl transition-colors"
                     >
