@@ -88,7 +88,8 @@ export default function ClassesManagementPage() {
         <div className="flex-1 p-4 sm:p-8 bg-[#F5F7FA]">
             <div className="max-w-4xl mx-auto">
                 <h1 className="text-2xl sm:text-3xl font-bold mb-2">Classes & Subjects</h1>
-                <p className="text-gray-500 mb-8">Manage academic classes and subjects</p>
+                <p className="text-gray-500 mb-4">Manage academic classes and subjects</p>
+                <p className="text-xs text-green-600 mb-4">Debug: {classes.length} classes loaded, {subjects.length} subjects loaded</p>
 
                 {/* Tabs */}
                 <div className="flex gap-2 mb-6">
