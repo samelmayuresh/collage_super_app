@@ -38,8 +38,12 @@ export default function ClassesManagementPage() {
             getClasses(),
             getSubjects()
         ]);
+        console.log('Admin Classes Page - classesResult:', classesResult);
+        console.log('Admin Classes Page - subjectsResult:', subjectsResult);
         if (classesResult.classes) setClasses(classesResult.classes);
+        if (classesResult.error) console.error('Error loading classes:', classesResult.error);
         if (subjectsResult.subjects) setSubjects(subjectsResult.subjects);
+        if (subjectsResult.error) console.error('Error loading subjects:', subjectsResult.error);
         setLoading(false);
     }
 
