@@ -5,6 +5,7 @@ import { TeachingSidebar } from '../../components/dashboard/TeachingSidebar';
 import { StaffSidebar } from '../../components/dashboard/StaffSidebar';
 import { AdminSidebar } from '../../components/dashboard/AdminSidebar';
 import { OfficeSidebar } from '../../components/dashboard/OfficeSidebar';
+import { StudentMobileNav } from '../../components/dashboard/StudentMobileNav';
 
 export default async function DashboardLayout({
     children,
@@ -36,6 +37,9 @@ export default async function DashboardLayout({
             {session.role === 'STAFF' && <StaffSidebar />}
             {session.role === 'ADMIN' && <AdminSidebar />}
             {session.role === 'OFFICE_STAFF' && <OfficeSidebar />}
+
+            {/* Mobile Bottom Navigation for Students */}
+            {session.role === 'STUDENT' && <StudentMobileNav />}
 
             {/* Applicants don't get a sidebar, just a simple header inside their page or maybe a minimal sidebar if needed. 
                 For now, we let them proceed without a sidebar or default to none. 
