@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2, X, Building2 } from 'lucide-react';
-import { getAllClassroomsWithDetails } from '../../../../actions/classroomAssignments';
+import { getBuildings, getFloors, getClassrooms } from '../../../../actions/buildings';
 import Link from 'next/link';
 
 interface StudentRow {
@@ -13,16 +13,16 @@ interface StudentRow {
     message?: string;
 }
 
-interface Classroom {
-    id: number;
-    room_number: string;
-    floor_number: number;
-    building_name: string;
-}
-
 export default function BulkImportPage() {
-    const [classrooms, setClassrooms] = useState<Classroom[]>([]);
+    // Cascaded Selection State
+    const [buildings, setBuildings] = useState<any[]>([]);
+    const [floors, setFloors] = useState<any[]>([]);
+    const [roomOptions, setRoomOptions] = useState<any[]>([]);
+
+    const [selBuilding, setSelBuilding] = useState<string>('');
+    const [selFloor, setSelFloor] = useState<string>('');
     const [selectedClassroomId, setSelectedClassroomId] = useState('');
+
     const [students, setStudents] = useState<StudentRow[]>([]);
     const [loading, setLoading] = useState(false);
     const [importing, setImporting] = useState(false);
@@ -30,12 +30,40 @@ export default function BulkImportPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        loadData();
+        loadBuildings();
     }, []);
 
-    async function loadData() {
-        const result = await getAllClassroomsWithDetails();
-        if (result.classrooms) setClassrooms(result.classrooms);
+    // Cascaded Load: Floors
+    useEffect(() => {
+        if (selBuilding) {
+            loadFloors(parseInt(selBuilding));
+            setSelFloor('');
+            setRoomOptions([]);
+            setSelectedClassroomId('');
+        }
+    }, [selBuilding]);
+
+    // Cascaded Load: Rooms
+    useEffect(() => {
+        if (selFloor) {
+            loadRooms(parseInt(selFloor));
+            setSelectedClassroomId('');
+        }
+    }, [selFloor]);
+
+    async function loadBuildings() {
+        const res = await getBuildings();
+        if (res.buildings) setBuildings(res.buildings);
+    }
+
+    async function loadFloors(buildingId: number) {
+        const res = await getFloors(buildingId);
+        if (res.floors) setFloors(res.floors);
+    }
+
+    async function loadRooms(floorId: number) {
+        const res = await getClassrooms(floorId);
+        if (res.classrooms) setRoomOptions(res.classrooms);
     }
 
     function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -121,7 +149,7 @@ export default function BulkImportPage() {
                             email: student.email,
                             password: 'student123', // Default password
                             classroomId: parseInt(selectedClassroomId),
-                            rollNumber: student.rollNumber // Sent but likely ignored by backend
+                            rollNumber: student.rollNumber
                         })
                     });
 
@@ -162,7 +190,14 @@ export default function BulkImportPage() {
 
     function reset() {
         setStudents([]);
+        // Keep selected classroom? Maybe better to keep it for batch importing multiple files to same class.
+        // setStep('upload'); 
+        // File input reset is tricky if keeping step 'upload'.
+        // Let's full reset for now.
         setSelectedClassroomId('');
+        setSelBuilding('');
+        setSelFloor('');
+
         setStep('upload');
         if (fileInputRef.current) fileInputRef.current.value = '';
     }
@@ -196,25 +231,62 @@ export default function BulkImportPage() {
                             <p className="text-gray-500">File should have columns: Name, Email, Roll Number</p>
                         </div>
 
-                        <div className="mb-6">
-                            <label className="block text-sm font-medium mb-2">Select Classroom *</label>
-                            <select
-                                value={selectedClassroomId}
-                                onChange={(e) => setSelectedClassroomId(e.target.value)}
-                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 bg-white"
-                            >
-                                <option value="">Choose a classroom...</option>
-                                {classrooms.map(c => (
-                                    <option key={c.id} value={c.id}>
-                                        {c.building_name} - Room {c.room_number} (Floor {c.floor_number})
-                                    </option>
-                                ))}
-                            </select>
-                            <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+                        <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            {/* Building Select */}
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Building *</label>
+                                <select
+                                    value={selBuilding}
+                                    onChange={(e) => setSelBuilding(e.target.value)}
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 bg-white"
+                                >
+                                    <option value="">Select Building...</option>
+                                    {buildings.map(b => (
+                                        <option key={b.id} value={b.id}>{b.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Floor Select */}
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Floor *</label>
+                                <select
+                                    value={selFloor}
+                                    onChange={(e) => setSelFloor(e.target.value)}
+                                    disabled={!selBuilding}
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 bg-white disabled:opacity-50"
+                                >
+                                    <option value="">Select Floor...</option>
+                                    {floors.map(f => (
+                                        <option key={f.id} value={f.id}>{f.floor_number}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Classroom Select */}
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Classroom *</label>
+                                <select
+                                    value={selectedClassroomId}
+                                    onChange={(e) => setSelectedClassroomId(e.target.value)}
+                                    disabled={!selFloor}
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 bg-white disabled:opacity-50"
+                                >
+                                    <option value="">Select Classroom...</option>
+                                    {roomOptions.map(c => (
+                                        <option key={c.id} value={c.id}>
+                                            Room {c.room_number}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        {selectedClassroomId && (
+                            <p className="text-xs text-gray-400 mb-6 flex items-center gap-1 justify-center">
                                 <Building2 size={12} />
                                 Students will be assigned to this physical location.
                             </p>
-                        </div>
+                        )}
 
                         <div
                             className="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center cursor-pointer hover:border-blue-400 transition-colors"

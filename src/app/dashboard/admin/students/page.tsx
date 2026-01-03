@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Filter, MoreVertical, Shield, User, Loader2, Plus, X, CheckCircle, GraduationCap, Building2, CheckSquare, Square } from 'lucide-react';
+import { Search, Loader2, Plus, X, Building2, CheckSquare, Square } from 'lucide-react';
 import { getAllStudents } from '../../../../actions/students';
 import { getAllClassroomsWithDetails, addStudentToClassroom, bulkAssignStudentsToClassroom } from '../../../../actions/classroomAssignments';
+import { getBuildings, getFloors, getClassrooms } from '../../../../actions/buildings';
 import Link from 'next/link';
 
 interface Student {
@@ -27,7 +28,7 @@ interface Classroom {
 
 export default function StudentsPage() {
     const [students, setStudents] = useState<Student[]>([]);
-    const [classrooms, setClassrooms] = useState<Classroom[]>([]);
+    const [classrooms, setClassrooms] = useState<Classroom[]>([]); // For Filter
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterClassroom, setFilterClassroom] = useState<string>('');
@@ -39,9 +40,53 @@ export default function StudentsPage() {
     const [assignClassroomId, setAssignClassroomId] = useState('');
     const [assigning, setAssigning] = useState(false);
 
+    // Cascaded Selection State (for Modal)
+    const [buildings, setBuildings] = useState<any[]>([]);
+    const [floors, setFloors] = useState<any[]>([]);
+    const [roomOptions, setRoomOptions] = useState<any[]>([]); // Classrooms for the selected floor
+    const [selBuilding, setSelBuilding] = useState<string>('');
+    const [selFloor, setSelFloor] = useState<string>('');
+
     useEffect(() => {
         loadData();
     }, []);
+
+    // Load Buildings when modal opens
+    useEffect(() => {
+        if (assignModalOpen) {
+            loadBuildings();
+        } else {
+            // Reset selectors when modal closes
+            setSelBuilding('');
+            setSelFloor('');
+            setRoomOptions([]);
+        }
+    }, [assignModalOpen]);
+
+    // Cascaded Load: Floors
+    useEffect(() => {
+        if (selBuilding) {
+            loadFloors(parseInt(selBuilding));
+            setSelFloor('');
+            setRoomOptions([]);
+            setAssignClassroomId('');
+        } else {
+            setFloors([]);
+            setRoomOptions([]);
+            setAssignClassroomId('');
+        }
+    }, [selBuilding]);
+
+    // Cascaded Load: Rooms
+    useEffect(() => {
+        if (selFloor) {
+            loadRooms(parseInt(selFloor));
+            setAssignClassroomId('');
+        } else {
+            setRoomOptions([]);
+            setAssignClassroomId('');
+        }
+    }, [selFloor]);
 
     async function loadData() {
         setLoading(true);
@@ -53,6 +98,21 @@ export default function StudentsPage() {
         if (studentsRes.students) setStudents(studentsRes.students);
         if (classroomsRes.classrooms) setClassrooms(classroomsRes.classrooms);
         setLoading(false);
+    }
+
+    async function loadBuildings() {
+        const res = await getBuildings();
+        if (res.buildings) setBuildings(res.buildings);
+    }
+
+    async function loadFloors(buildingId: number) {
+        const res = await getFloors(buildingId);
+        if (res.floors) setFloors(res.floors);
+    }
+
+    async function loadRooms(floorId: number) {
+        const res = await getClassrooms(floorId);
+        if (res.classrooms) setRoomOptions(res.classrooms);
     }
 
     async function handleAssignClassroom() {
@@ -84,7 +144,9 @@ export default function StudentsPage() {
 
     function openAssignModal(student: Student) {
         setSelectedStudent(student);
-        setAssignClassroomId(student.classroom_id?.toString() || '');
+        // We don't pre-fill cascading selectors (complex logic to reverse map room->floor->building)
+        // It's cleaner to ask them to select fresh.
+        setAssignClassroomId('');
         setAssignModalOpen(true);
     }
 
@@ -309,28 +371,58 @@ export default function StudentsPage() {
                             <p className="text-sm text-gray-500 mb-4">
                                 {selectedStudent
                                     ? <span>Assigning <span className="font-bold text-slate-800">{selectedStudent.name}</span> to a classroom.</span>
-                                    : <span>Assigning <span className="font-bold text-slate-800">{selectedIds.length} students</span> to a classroom. Roll numbers will be automatically generated.</span>
+                                    : <span>Assigning <span className="font-bold text-slate-800">{selectedIds.length} students</span>. Roll numbers will be automatically generated.</span>
                                 }
                             </p>
 
                             <div className="space-y-4">
+                                {/* Building Select */}
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Building</label>
+                                    <select
+                                        value={selBuilding}
+                                        onChange={(e) => setSelBuilding(e.target.value)}
+                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500 bg-white"
+                                    >
+                                        <option value="">Select Building...</option>
+                                        {buildings.map(b => (
+                                            <option key={b.id} value={b.id}>{b.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Floor Select */}
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Floor</label>
+                                    <select
+                                        value={selFloor}
+                                        onChange={(e) => setSelFloor(e.target.value)}
+                                        disabled={!selBuilding}
+                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500 bg-white disabled:opacity-50"
+                                    >
+                                        <option value="">Select Floor...</option>
+                                        {floors.map(f => (
+                                            <option key={f.id} value={f.id}>{f.floor_number}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Classroom Select */}
                                 <div>
                                     <label className="block text-sm font-medium mb-1">Classroom</label>
                                     <select
                                         value={assignClassroomId}
                                         onChange={(e) => setAssignClassroomId(e.target.value)}
-                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500 bg-white"
+                                        disabled={!selFloor}
+                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500 bg-white disabled:opacity-50"
                                     >
                                         <option value="">Select Classroom...</option>
-                                        {classrooms.map(c => (
+                                        {roomOptions.map(c => (
                                             <option key={c.id} value={c.id}>
-                                                {c.building_name} - Room {c.room_number} (F{c.floor_number})
+                                                Room {c.room_number}
                                             </option>
                                         ))}
                                     </select>
-                                    <p className="text-xs text-gray-500 mt-2">
-                                        Students will be able to mark attendance in this classroom.
-                                    </p>
                                 </div>
                             </div>
                         </div>
