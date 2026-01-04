@@ -50,9 +50,14 @@ export function EventCreator({ userId, onCreated }: { userId: number; onCreated?
                 setIsOpen(false);
                 setForm({ title: '', description: '', event_type: 'general', start_date: '', end_date: '', location: '', is_mandatory: false, target_roles: [] });
                 onCreated?.();
+                alert('Event created successfully!');
+            } else {
+                const err = await res.json();
+                alert(`Failed to create event: ${err.error || 'Unknown error'}`);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error creating event:', error);
+            alert(`Error: ${error.message}`);
         }
         setLoading(false);
     };
@@ -209,9 +214,14 @@ export function AnnouncementCreator({ userId, onCreated }: { userId: number; onC
                 setIsOpen(false);
                 setForm({ title: '', content: '', priority: 'normal', target_roles: [], is_pinned: false, expires_at: '' });
                 onCreated?.();
+                alert('Announcement created successfully!');
+            } else {
+                const err = await res.json();
+                alert(`Failed to create announcement: ${err.error || 'Unknown error'}`);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error creating announcement:', error);
+            alert(`Error: ${error.message}`);
         }
         setLoading(false);
     };

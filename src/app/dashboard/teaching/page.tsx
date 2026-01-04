@@ -56,7 +56,7 @@ export default async function TeachingDashboard() {
                 </div>
 
                 {/* Management Panel */}
-                <EventsManagementPanel userId={parseInt(session.userId)} />
+                <EventsManagementPanel userId={parseInt(session.userId || '0')} />
 
                 {/* Classes Section */}
                 <div>

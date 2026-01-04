@@ -22,7 +22,7 @@ export default async function AdminDashboard() {
             </div>
 
             {/* Management Panel */}
-            <EventsManagementPanel userId={parseInt(session.userId)} />
+            <EventsManagementPanel userId={parseInt(session.userId || '0')} />
 
             {/* Stats Grid */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
