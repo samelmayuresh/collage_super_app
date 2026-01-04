@@ -230,3 +230,10 @@ def delete_table(table_name: str):
         return {"success": True, "message": f"Table '{safe_name}' deleted"}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+# Vercel serverless handler
+try:
+    from mangum import Mangum
+    handler = Mangum(app)
+except ImportError:
+    handler = None

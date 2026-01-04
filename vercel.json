@@ -1,0 +1,14 @@
+{
+    "functions": {
+        "api/python.py": {
+            "runtime": "python3.9",
+            "maxDuration": 60
+        }
+    },
+    "rewrites": [
+        {
+            "source": "/api/python/:path*",
+            "destination": "/api/python"
+        }
+    ]
+}
