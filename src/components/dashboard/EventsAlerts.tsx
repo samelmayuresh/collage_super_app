@@ -86,7 +86,7 @@ export function EventsCard({ events }: { events: Event[] }) {
                         </div>
                         <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
                             <span className="flex items-center gap-1">
-                                <Clock size={12} /> {new Date(event.start_date).toLocaleDateString()}
+                                <Clock size={12} /> {new Date(event.start_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                             </span>
                             {event.location && (
                                 <span className="flex items-center gap-1">
@@ -120,7 +120,7 @@ export function AnnouncementsCard({ announcements }: { announcements: Announceme
                                 <h4 className="font-semibold text-gray-800">{a.title}</h4>
                                 <p className="text-sm text-gray-600 mt-1">{a.content.slice(0, 100)}...</p>
                                 <span className="text-xs text-gray-400 mt-2 block">
-                                    {new Date(a.created_at).toLocaleDateString()}
+                                    {new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                                 </span>
                             </div>
                         </div>
