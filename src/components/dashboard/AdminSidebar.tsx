@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, Users, Book, BookOpen, Upload, LogOut, Menu, X, User, Calendar } from 'lucide-react';
+import { LayoutDashboard, Users, Book, BookOpen, Upload, LogOut, Menu, X, User, Calendar, Database } from 'lucide-react';
 import { logout } from '../../actions/auth';
 import { UserCard } from './UserCard';
 
@@ -67,6 +67,10 @@ export function AdminSidebar() {
                         <Calendar size={20} />
                         <span>Calendar</span>
                     </Link>
+                    <Link href="/dashboard/admin/data" onClick={() => setIsOpen(false)} className={linkClass}>
+                        <Database size={20} />
+                        <span>Data Engine</span>
+                    </Link>
                     <Link href="/dashboard/admin/import" onClick={() => setIsOpen(false)} className={linkClass}>
                         <Upload size={20} />
                         <span>Bulk Import</span>
@@ -119,6 +123,10 @@ export function AdminSidebar() {
                     <Link href="/dashboard/admin/calendar" className={linkClass}>
                         <Calendar size={20} />
                         <span>Calendar</span>
+                    </Link>
+                    <Link href="/dashboard/admin/data" className={linkClass}>
+                        <Database size={20} />
+                        <span>Data Engine</span>
                     </Link>
                     <Link href="/dashboard/admin/import" className={linkClass}>
                         <Upload size={20} />
