@@ -1,6 +1,6 @@
 import { getSession } from '../../../actions/auth';
 import { Search, Bell, Monitor, Briefcase, Video, Box, PenTool, User, Settings } from 'lucide-react';
-import { StudentNotificationsStatic } from '../../../components/dashboard/StudentNotifications';
+import { StudentNotifications } from '../../../components/dashboard/StudentNotifications';
 
 export default async function StudentDashboard() {
     const session = await getSession();
@@ -21,7 +21,7 @@ export default async function StudentDashboard() {
                 </div>
 
                 {/* Events and Announcements */}
-                <StudentNotificationsStatic />
+                <StudentNotifications userId={parseInt(session.userId || '0')} userRole={session.role} />
 
                 {/* Filters */}
                 <div className="flex gap-3 overflow-x-auto pb-2">

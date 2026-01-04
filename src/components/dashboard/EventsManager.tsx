@@ -334,7 +334,12 @@ export function AnnouncementCreator({ userId, onCreated }: { userId: number; onC
 export function EventsManagementPanel({ userId }: { userId: number }) {
     return (
         <div className="bg-white rounded-2xl shadow-sm border p-6">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">📢 Manage Communications</h3>
+            <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-gray-800">📢 Manage Communications</h3>
+                <a href="/dashboard/events" className="text-violet-600 hover:text-violet-700 text-sm font-medium hover:underline">
+                    View All Events →
+                </a>
+            </div>
             <div className="flex flex-wrap gap-3">
                 <EventCreator userId={userId} />
                 <AnnouncementCreator userId={userId} />
