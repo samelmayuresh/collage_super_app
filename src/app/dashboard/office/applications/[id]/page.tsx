@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { appDb } from '../../../../../../lib/db';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
-import ApplicationActions from './ApplicationActions';
+import ApplicationActions from '@/components/dashboard/office/ApplicationActions';
 
 export default async function ApplicationDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const session = await getSession();
