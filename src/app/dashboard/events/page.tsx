@@ -16,7 +16,7 @@ export default async function EventsPage() {
     const session = await getSession();
 
     // Redirect if not logged in
-    if (!session || !session.userId) {
+    if (!session || !session.id) {
         return <div className="p-8 text-center">Please log in to view events.</div>;
     }
 
