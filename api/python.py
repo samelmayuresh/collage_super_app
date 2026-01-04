@@ -93,3 +93,75 @@ async def download_file(file: UploadFile = File(...), table_name: str = Form("ex
             "errors": [str(e)],
             "logs": ["❌ Download Error", traceback.format_exc()[:800]]
         }
+
+# === TABLE BROWSER ENDPOINTS ===
+from sqlalchemy import create_engine, text
+
+@app.get("/api/python/tables")
+def list_tables():
+    """List all user-created tables in the database"""
+    try:
+        engine = create_engine(DB_URL)
+        with engine.connect() as conn:
+            result = conn.execute(text("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_type = 'BASE TABLE'
+                ORDER BY table_name
+            """))
+            tables = [row[0] for row in result]
+        return {"success": True, "tables": tables}
+    except Exception as e:
+        return {"success": False, "error": str(e), "tables": []}
+
+@app.get("/api/python/tables/{table_name}")
+def get_table_data(table_name: str, limit: int = 100):
+    """Get preview data from a specific table"""
+    try:
+        # Sanitize table name
+        safe_name = sanitize_column_name(table_name)
+        if not safe_name:
+            return {"success": False, "error": "Invalid table name"}
+        
+        engine = create_engine(DB_URL)
+        with engine.connect() as conn:
+            # Get column names
+            cols_result = conn.execute(text(f"""
+                SELECT column_name, data_type 
+                FROM information_schema.columns 
+                WHERE table_name = :table_name
+                ORDER BY ordinal_position
+            """), {"table_name": safe_name})
+            columns = [{"name": row[0], "type": row[1]} for row in cols_result]
+            
+            # Get data
+            data_result = conn.execute(text(f'SELECT * FROM "{safe_name}" LIMIT :limit'), {"limit": limit})
+            rows = [dict(row._mapping) for row in data_result]
+            
+            # Get row count
+            count_result = conn.execute(text(f'SELECT COUNT(*) FROM "{safe_name}"'))
+            total_rows = count_result.scalar()
+        
+        return {
+            "success": True,
+            "table_name": safe_name,
+            "columns": columns,
+            "rows": rows,
+            "total_rows": total_rows,
+            "showing": min(limit, total_rows)
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.delete("/api/python/tables/{table_name}")
+def delete_table(table_name: str):
+    """Delete a table"""
+    try:
+        safe_name = sanitize_column_name(table_name)
+        engine = create_engine(DB_URL)
+        with engine.begin() as conn:
+            conn.execute(text(f'DROP TABLE IF EXISTS "{safe_name}"'))
+        return {"success": True, "message": f"Table '{safe_name}' deleted"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}

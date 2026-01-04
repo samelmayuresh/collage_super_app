@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styles from './DataImporter.module.css';
-import { Loader2, CheckCircle, AlertCircle, Terminal, Download, Sparkles, Plus, Trash2, Settings2 } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, Terminal, Download, Sparkles, Plus, Trash2, Settings2, Database, Table, Eye, RefreshCw } from 'lucide-react';
 
 interface SchemaField {
     name: string;
@@ -11,7 +11,10 @@ interface SchemaField {
     mapFrom?: string;
 }
 
+type Tab = 'import' | 'tables';
+
 export default function DataImporter() {
+    const [activeTab, setActiveTab] = useState<Tab>('import');
     const [file, setFile] = useState<File | null>(null);
     const [tableName, setTableName] = useState('');
     const [isUploading, setIsUploading] = useState(false);
@@ -19,6 +22,63 @@ export default function DataImporter() {
     const [showSchema, setShowSchema] = useState(false);
     const [schema, setSchema] = useState<SchemaField[]>([]);
     const [detectedColumns, setDetectedColumns] = useState<string[]>([]);
+
+    // Table Browser State
+    const [tables, setTables] = useState<string[]>([]);
+    const [selectedTable, setSelectedTable] = useState('');
+    const [tableData, setTableData] = useState<any>(null);
+    const [loadingTables, setLoadingTables] = useState(false);
+
+    // Fetch tables on mount and when tab changes
+    useEffect(() => {
+        if (activeTab === 'tables') {
+            fetchTables();
+        }
+    }, [activeTab]);
+
+    const fetchTables = async () => {
+        setLoadingTables(true);
+        try {
+            const res = await fetch('/api/python/tables');
+            const data = await res.json();
+            if (data.success) {
+                setTables(data.tables);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+        setLoadingTables(false);
+    };
+
+    const fetchTableData = async (name: string) => {
+        setSelectedTable(name);
+        setLoadingTables(true);
+        try {
+            const res = await fetch(`/api/python/tables/${name}`);
+            const data = await res.json();
+            if (data.success) {
+                setTableData(data);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+        setLoadingTables(false);
+    };
+
+    const deleteTable = async (name: string) => {
+        if (!confirm(`Delete table "${name}"? This cannot be undone.`)) return;
+        try {
+            const res = await fetch(`/api/python/tables/${name}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.success) {
+                fetchTables();
+                setTableData(null);
+                setSelectedTable('');
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -28,7 +88,6 @@ export default function DataImporter() {
             setTableName(suggestedName);
             setResult(null);
 
-            // Detect columns from CSV header
             if (selectedFile.name.endsWith('.csv')) {
                 const text = await selectedFile.slice(0, 2000).text();
                 const firstLine = text.split('\n')[0];
@@ -38,39 +97,24 @@ export default function DataImporter() {
         }
     };
 
-    const addSchemaField = () => {
-        setSchema([...schema, { name: '', type: 'text', required: false }]);
-    };
-
-    const removeSchemaField = (index: number) => {
-        setSchema(schema.filter((_, i) => i !== index));
-    };
-
-    const updateSchemaField = (index: number, field: Partial<SchemaField>) => {
+    const addSchemaField = () => setSchema([...schema, { name: '', type: 'text', required: false }]);
+    const removeSchemaField = (i: number) => setSchema(schema.filter((_, idx) => idx !== i));
+    const updateSchemaField = (i: number, field: Partial<SchemaField>) => {
         const newSchema = [...schema];
-        newSchema[index] = { ...newSchema[index], ...field };
+        newSchema[i] = { ...newSchema[i], ...field };
         setSchema(newSchema);
     };
 
     const handleDownload = async () => {
         if (!file) return;
         setIsUploading(true);
-
         const formData = new FormData();
         formData.append('file', file);
         formData.append('table_name', 'export');
-        if (schema.length > 0) {
-            formData.append('schema', JSON.stringify(schema));
-        }
-
+        if (schema.length > 0) formData.append('schema', JSON.stringify(schema));
         try {
-            const response = await fetch('/api/python/download', {
-                method: 'POST',
-                body: formData,
-            });
-
+            const response = await fetch('/api/python/download', { method: 'POST', body: formData });
             if (!response.ok) throw new Error("Download failed");
-
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -79,229 +123,201 @@ export default function DataImporter() {
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
-            setResult({ success: true, tableName: "Downloaded", logs: ["✅ Cleaned file downloaded successfully."] });
+            setResult({ success: true, logs: ["✅ File downloaded"] });
         } catch (error) {
-            setResult({ success: false, errors: ["Download failed. Check backend connection."] });
-        } finally {
-            setIsUploading(false);
+            setResult({ success: false, errors: ["Download failed"] });
         }
+        setIsUploading(false);
     };
 
     const handleUpload = async () => {
         if (!file || !tableName) return;
         setIsUploading(true);
         setResult(null);
-
         const formData = new FormData();
         formData.append('file', file);
         formData.append('table_name', tableName);
-        if (schema.length > 0) {
-            formData.append('schema', JSON.stringify(schema));
-        }
-
+        if (schema.length > 0) formData.append('schema', JSON.stringify(schema));
         try {
-            const response = await fetch('/api/python/upload', {
-                method: 'POST',
-                body: formData,
-            });
-
-            if (!response.ok) {
-                const text = await response.text();
-                throw new Error(`${response.status}: ${text.substring(0, 100)}`);
-            }
-
+            const response = await fetch('/api/python/upload', { method: 'POST', body: formData });
+            if (!response.ok) throw new Error(`${response.status}`);
             const data = await response.json();
             setResult(data);
         } catch (error: any) {
-            setResult({
-                success: false,
-                errors: [`Connection Failed: ${error.message}`]
-            });
-        } finally {
-            setIsUploading(false);
+            setResult({ success: false, errors: [error.message] });
         }
+        setIsUploading(false);
     };
 
     return (
-        <div className="w-full max-w-5xl mx-auto p-6 space-y-6">
+        <div className="w-full max-w-6xl mx-auto p-6 space-y-6">
 
-            {/* 3D Folder Upload UI */}
-            <div className={styles.importerWrapper}>
-                <div className={styles.container}>
-                    <div className={styles.folder}>
-                        <div className={styles.frontSide}>
-                            <div className={styles.tip} />
-                            <div className={styles.cover} />
-                        </div>
-                        <div className={`${styles.backSide} ${styles.cover}`} />
-                    </div>
-                    <label className={styles.customFileUpload}>
-                        <input type="file" accept=".csv,.xlsx,.xls" onChange={handleFileChange} />
-                        {file ? "Change File" : "Upload Dataset"}
-                    </label>
-                </div>
+            {/* Tab Switcher */}
+            <div className="flex gap-2 bg-gray-100 p-1 rounded-xl w-fit">
+                <button
+                    onClick={() => setActiveTab('import')}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-all ${activeTab === 'import' ? 'bg-white text-black shadow' : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                >
+                    <Sparkles size={18} /> Import Data
+                </button>
+                <button
+                    onClick={() => setActiveTab('tables')}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-all ${activeTab === 'tables' ? 'bg-white text-black shadow' : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                >
+                    <Database size={18} /> Browse Tables
+                </button>
             </div>
 
-            {/* Control Panel */}
-            {file && (
-                <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 space-y-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                            <Sparkles size={16} className="text-yellow-500" />
-                            <span>📁 {file.name} ({(file.size / 1024).toFixed(1)} KB)</span>
+            {/* === IMPORT TAB === */}
+            {activeTab === 'import' && (
+                <>
+                    {/* 3D Folder */}
+                    <div className={styles.importerWrapper}>
+                        <div className={styles.container}>
+                            <div className={styles.folder}>
+                                <div className={styles.frontSide}>
+                                    <div className={styles.tip} />
+                                    <div className={styles.cover} />
+                                </div>
+                                <div className={`${styles.backSide} ${styles.cover}`} />
+                            </div>
+                            <label className={styles.customFileUpload}>
+                                <input type="file" accept=".csv,.xlsx,.xls" onChange={handleFileChange} />
+                                {file ? "Change File" : "Upload Dataset"}
+                            </label>
                         </div>
-                        <button
-                            onClick={() => setShowSchema(!showSchema)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${showSchema ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                }`}
-                        >
-                            <Settings2 size={16} />
-                            {showSchema ? 'Hide Schema' : 'Define Schema'}
-                        </button>
                     </div>
 
-                    {/* Schema Builder */}
-                    {showSchema && (
-                        <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-5 rounded-xl border border-purple-100 space-y-4">
-                            <div className="flex items-center justify-between">
-                                <h3 className="font-semibold text-purple-900">🎯 Target Schema</h3>
-                                <button
-                                    onClick={addSchemaField}
-                                    className="flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700"
-                                >
-                                    <Plus size={14} /> Add Column
+                    {file && (
+                        <div className="bg-white p-6 rounded-2xl shadow-lg border space-y-4">
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-500">📁 {file.name}</span>
+                                <button onClick={() => setShowSchema(!showSchema)} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${showSchema ? 'bg-purple-100 text-purple-700' : 'bg-gray-100'}`}>
+                                    <Settings2 size={16} /> {showSchema ? 'Hide Schema' : 'Define Schema'}
                                 </button>
                             </div>
 
-                            {schema.length === 0 && (
-                                <p className="text-sm text-purple-600 italic">Define columns to enforce a specific structure. Leave empty for auto-detection.</p>
+                            {showSchema && (
+                                <div className="bg-purple-50 p-4 rounded-xl space-y-3">
+                                    <div className="flex justify-between">
+                                        <h3 className="font-semibold text-purple-900">🎯 Target Schema</h3>
+                                        <button onClick={addSchemaField} className="flex items-center gap-1 px-3 py-1 bg-purple-600 text-white rounded-lg text-sm"><Plus size={14} /> Add</button>
+                                    </div>
+                                    {schema.map((f, i) => (
+                                        <div key={i} className="flex gap-2 items-center bg-white p-2 rounded-lg">
+                                            <input placeholder="Column name" value={f.name} onChange={e => updateSchemaField(i, { name: e.target.value })} className="flex-1 px-2 py-1 border rounded text-sm" />
+                                            <select value={f.type} onChange={e => updateSchemaField(i, { type: e.target.value as any })} className="px-2 py-1 border rounded text-sm">
+                                                <option value="text">Text</option><option value="number">Number</option><option value="date">Date</option><option value="email">Email</option><option value="phone">Phone</option>
+                                            </select>
+                                            {detectedColumns.length > 0 && (
+                                                <select value={f.mapFrom || ''} onChange={e => updateSchemaField(i, { mapFrom: e.target.value })} className="px-2 py-1 border rounded text-sm">
+                                                    <option value="">Map from...</option>
+                                                    {detectedColumns.map(c => <option key={c} value={c}>{c}</option>)}
+                                                </select>
+                                            )}
+                                            <button onClick={() => removeSchemaField(i)} className="p-1 text-red-500"><Trash2 size={16} /></button>
+                                        </div>
+                                    ))}
+                                </div>
                             )}
 
-                            {schema.map((field, index) => (
-                                <div key={index} className="flex gap-3 items-center bg-white p-3 rounded-lg shadow-sm">
-                                    <input
-                                        type="text"
-                                        placeholder="Column name"
-                                        value={field.name}
-                                        onChange={(e) => updateSchemaField(index, { name: e.target.value })}
-                                        className="flex-1 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-300"
-                                    />
-                                    <select
-                                        value={field.type}
-                                        onChange={(e) => updateSchemaField(index, { type: e.target.value as any })}
-                                        className="px-3 py-2 border rounded-lg text-sm bg-white"
-                                    >
-                                        <option value="text">Text</option>
-                                        <option value="number">Number</option>
-                                        <option value="date">Date</option>
-                                        <option value="email">Email</option>
-                                        <option value="phone">Phone</option>
-                                        <option value="boolean">Yes/No</option>
-                                    </select>
-                                    {detectedColumns.length > 0 && (
-                                        <select
-                                            value={field.mapFrom || ''}
-                                            onChange={(e) => updateSchemaField(index, { mapFrom: e.target.value })}
-                                            className="px-3 py-2 border rounded-lg text-sm bg-white"
-                                        >
-                                            <option value="">Map from...</option>
-                                            {detectedColumns.map(col => (
-                                                <option key={col} value={col}>{col}</option>
-                                            ))}
-                                        </select>
-                                    )}
-                                    <label className="flex items-center gap-1 text-sm">
-                                        <input
-                                            type="checkbox"
-                                            checked={field.required}
-                                            onChange={(e) => updateSchemaField(index, { required: e.target.checked })}
-                                        />
-                                        Required
-                                    </label>
-                                    <button
-                                        onClick={() => removeSchemaField(index)}
-                                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
-                                </div>
+                            <div className="flex gap-4">
+                                <input value={tableName} onChange={e => setTableName(e.target.value)} placeholder="Table name" className="flex-1 px-4 py-3 border-2 rounded-xl" />
+                                <button onClick={handleUpload} disabled={isUploading} className="bg-black text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2">
+                                    {isUploading ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />} Transform
+                                </button>
+                                <button onClick={handleDownload} disabled={isUploading} className="border-2 border-black px-6 py-3 rounded-xl font-semibold flex items-center gap-2">
+                                    <Download size={18} /> Download
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {result && (
+                        <div className={`p-5 rounded-2xl border-2 ${result.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                            <h3 className={`font-bold ${result.success ? 'text-green-900' : 'text-red-900'}`}>
+                                {result.success ? '🎉 Success' : '❌ Failed'}
+                            </h3>
+                            <div className="mt-3 bg-slate-900 rounded-xl p-4 font-mono text-xs max-h-48 overflow-auto">
+                                {result.logs?.map((l: string, i: number) => <div key={i} className="text-slate-300 border-l-2 border-emerald-500 pl-3 py-0.5">{l}</div>)}
+                                {result.errors?.map((e: string, i: number) => <div key={i} className="text-red-400 border-l-2 border-red-500 pl-3">{e}</div>)}
+                            </div>
+                        </div>
+                    )}
+                </>
+            )}
+
+            {/* === TABLES TAB === */}
+            {activeTab === 'tables' && (
+                <div className="bg-white p-6 rounded-2xl shadow-lg border space-y-4">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-xl font-bold flex items-center gap-2"><Database size={24} /> Your Tables</h2>
+                        <button onClick={fetchTables} className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg text-sm hover:bg-gray-200">
+                            <RefreshCw size={16} className={loadingTables ? 'animate-spin' : ''} /> Refresh
+                        </button>
+                    </div>
+
+                    {tables.length === 0 ? (
+                        <p className="text-gray-500 text-center py-8">No tables found. Import data to create tables.</p>
+                    ) : (
+                        <div className="grid grid-cols-4 gap-3">
+                            {tables.map(t => (
+                                <button
+                                    key={t}
+                                    onClick={() => fetchTableData(t)}
+                                    className={`p-4 rounded-xl border-2 text-left transition-all ${selectedTable === t ? 'border-black bg-gray-50' : 'border-gray-200 hover:border-gray-400'
+                                        }`}
+                                >
+                                    <Table size={20} className="text-gray-400 mb-2" />
+                                    <span className="font-mono text-sm">{t}</span>
+                                </button>
                             ))}
                         </div>
                     )}
 
-                    <div className="flex flex-col md:flex-row gap-4 items-end">
-                        <div className="flex-1 space-y-2 w-full">
-                            <label className="text-sm font-medium text-gray-700">Target Table Name</label>
-                            <input
-                                type="text"
-                                value={tableName}
-                                onChange={(e) => setTableName(e.target.value)}
-                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-black focus:border-black focus:outline-none transition-all"
-                                placeholder="e.g. students_2024"
-                            />
-                        </div>
-                        <div className="flex-1 w-full grid grid-cols-2 gap-2">
-                            <button
-                                onClick={handleUpload}
-                                disabled={isUploading}
-                                className="bg-gradient-to-r from-black to-gray-800 text-white px-4 py-3 rounded-xl font-semibold hover:from-gray-800 hover:to-black disabled:opacity-50 flex items-center justify-center gap-2 transition-all shadow-lg"
-                            >
-                                {isUploading ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
-                                Transform & Load
-                            </button>
-                            <button
-                                onClick={handleDownload}
-                                disabled={isUploading}
-                                className="bg-white text-black border-2 border-black px-4 py-3 rounded-xl font-semibold hover:bg-gray-50 disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
-                            >
-                                <Download size={18} />
-                                Download Clean
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Results */}
-            {result && (
-                <div className={`p-6 rounded-2xl border-2 ${result.success ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200' : 'bg-gradient-to-br from-red-50 to-pink-50 border-red-200'}`}>
-                    <div className="flex items-start gap-4">
-                        <div className={`p-3 rounded-xl ${result.success ? 'bg-green-500' : 'bg-red-500'}`}>
-                            {result.success ? <CheckCircle size={24} className="text-white" /> : <AlertCircle size={24} className="text-white" />}
-                        </div>
-                        <div className="flex-1 space-y-4">
-                            <div>
-                                <h3 className={`text-xl font-bold ${result.success ? 'text-green-900' : 'text-red-900'}`}>
-                                    {result.success ? '🎉 Transformation Complete' : '❌ Transformation Failed'}
+                    {tableData && (
+                        <div className="mt-6 space-y-4">
+                            <div className="flex justify-between items-center">
+                                <h3 className="font-bold text-lg flex items-center gap-2">
+                                    <Eye size={20} /> {tableData.table_name}
+                                    <span className="text-sm font-normal text-gray-500">
+                                        ({tableData.showing} of {tableData.total_rows} rows)
+                                    </span>
                                 </h3>
-                                {result.success && result.rowCount && (
-                                    <p className="text-sm text-green-700 mt-1">
-                                        Created table <code className="bg-green-100 px-2 py-0.5 rounded font-mono">{result.tableName}</code> with {result.rowCount} records
-                                    </p>
-                                )}
+                                <button onClick={() => deleteTable(tableData.table_name)} className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-600 rounded-lg text-sm hover:bg-red-200">
+                                    <Trash2 size={16} /> Delete Table
+                                </button>
                             </div>
 
-                            {/* Console Logs */}
-                            <div className="bg-slate-900 rounded-xl overflow-hidden shadow-xl">
-                                <div className="bg-slate-800 px-4 py-2 flex items-center gap-2 border-b border-slate-700">
-                                    <Terminal size={14} className="text-emerald-400" />
-                                    <span className="text-xs font-mono text-slate-300">Transformation Log</span>
-                                </div>
-                                <div className="p-4 font-mono text-xs space-y-1 max-h-60 overflow-y-auto">
-                                    {result.logs?.map((log: string, i: number) => (
-                                        <div key={i} className="text-slate-300 border-l-2 border-emerald-500 pl-3 py-0.5">
-                                            {log}
-                                        </div>
-                                    ))}
-                                    {result.errors?.map((err: string, i: number) => (
-                                        <div key={`err-${i}`} className="text-red-400 border-l-2 border-red-500 pl-3 py-0.5 bg-red-900/20">
-                                            ❌ {err}
-                                        </div>
-                                    ))}
-                                </div>
+                            <div className="overflow-x-auto border rounded-xl">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-100">
+                                        <tr>
+                                            {tableData.columns.map((c: any) => (
+                                                <th key={c.name} className="px-4 py-3 text-left font-semibold">
+                                                    {c.name}
+                                                    <span className="text-xs font-normal text-gray-400 ml-1">({c.type})</span>
+                                                </th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {tableData.rows.map((row: any, i: number) => (
+                                            <tr key={i} className="border-t hover:bg-gray-50">
+                                                {tableData.columns.map((c: any) => (
+                                                    <td key={c.name} className="px-4 py-2 font-mono text-xs">
+                                                        {String(row[c.name] ?? '')}
+                                                    </td>
+                                                ))}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             )}
         </div>
