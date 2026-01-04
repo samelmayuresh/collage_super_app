@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import styles from './DataImporter.module.css';
-import { Loader2, CheckCircle, AlertCircle, Terminal } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, Terminal, Download, Sparkles, Trash2, Calendar, Mail, Phone, Hash } from 'lucide-react';
 
 export default function DataImporter() {
     const [file, setFile] = useState<File | null>(null);
@@ -14,7 +14,6 @@ export default function DataImporter() {
         if (e.target.files && e.target.files[0]) {
             const selectedFile = e.target.files[0];
             setFile(selectedFile);
-            // Auto-suggest table name from filename
             const suggestedName = selectedFile.name.split('.')[0].replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
             setTableName(suggestedName);
             setResult(null);
@@ -45,10 +44,9 @@ export default function DataImporter() {
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
-            setResult({ success: true, tableName: "Downloaded File", rowCount: "N/A", logs: ["File downloaded successfully."] });
+            setResult({ success: true, tableName: "Downloaded", logs: ["✅ Cleaned file downloaded successfully."] });
         } catch (error) {
-            console.error(error);
-            setResult({ success: false, errors: ["Download failed."] });
+            setResult({ success: false, errors: ["Download failed. Check backend connection."] });
         } finally {
             setIsUploading(false);
         }
@@ -56,7 +54,6 @@ export default function DataImporter() {
 
     const handleUpload = async () => {
         if (!file || !tableName) return;
-
         setIsUploading(true);
         setResult(null);
 
@@ -65,7 +62,6 @@ export default function DataImporter() {
         formData.append('table_name', tableName);
 
         try {
-            // Call Python Microservice (via Next.js Rewrite or Vercel Route)
             const response = await fetch('/api/python/upload', {
                 method: 'POST',
                 body: formData,
@@ -73,21 +69,29 @@ export default function DataImporter() {
 
             if (!response.ok) {
                 const text = await response.text();
-                throw new Error(`Server responded with ${response.status}: ${text.substring(0, 100)}`);
+                throw new Error(`${response.status}: ${text.substring(0, 100)}`);
             }
 
             const data = await response.json();
             setResult(data);
         } catch (error: any) {
-            console.error("Upload failed", error);
             setResult({
                 success: false,
-                errors: [`Connection Failed: ${error.message}. Ensure backend is running and Next.js server was restarted.`]
+                errors: [`Connection Failed: ${error.message}`]
             });
         } finally {
             setIsUploading(false);
         }
     };
+
+    const StatBadge = ({ icon: Icon, label, value, color }: any) => (
+        value > 0 && (
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${color} text-white text-xs font-medium`}>
+                <Icon size={14} />
+                <span>{value} {label}</span>
+            </div>
+        )
+    );
 
     return (
         <div className="w-full max-w-4xl mx-auto p-6 space-y-8">
@@ -103,7 +107,7 @@ export default function DataImporter() {
                         <div className={`${styles.backSide} ${styles.cover}`} />
                     </div>
                     <label className={styles.customFileUpload}>
-                        <input className="title" type="file" accept=".csv,.xlsx,.xls" onChange={handleFileChange} />
+                        <input type="file" accept=".csv,.xlsx,.xls" onChange={handleFileChange} />
                         {file ? "Change File" : "Upload Dataset"}
                     </label>
                 </div>
@@ -111,7 +115,12 @@ export default function DataImporter() {
 
             {/* Control Panel */}
             {file && (
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4 animate-in fade-in slide-in-from-bottom-4">
+                <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 space-y-4">
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Sparkles size={16} className="text-yellow-500" />
+                        <span>Flagship Engine will auto-detect & transform: Dates, Emails, Phones, Names, Currency</span>
+                    </div>
+
                     <div className="flex flex-col md:flex-row gap-4 items-end">
                         <div className="flex-1 space-y-2 w-full">
                             <label className="text-sm font-medium text-gray-700">Target Table Name</label>
@@ -119,72 +128,85 @@ export default function DataImporter() {
                                 type="text"
                                 value={tableName}
                                 onChange={(e) => setTableName(e.target.value)}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:outline-none"
+                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-black focus:border-black focus:outline-none transition-all"
                                 placeholder="e.g. students_2024"
                             />
                         </div>
-                        <div className="flex-1 w-full grid grid-cols-2 gap-2">
-                            <div className="col-span-2 text-sm text-gray-500 mb-2">Selected: {file.name} ({(file.size / 1024).toFixed(1)} KB)</div>
-
-                            <button
-                                onClick={handleUpload}
-                                disabled={isUploading}
-                                className="w-full bg-black text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
-                            >
-                                {isUploading ? <Loader2 className="animate-spin" size={18} /> : "Start Transformation"}
-                            </button>
-
-                            <button
-                                onClick={handleDownload}
-                                disabled={isUploading}
-                                className="w-full bg-white text-black border-2 border-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
-                            >
-                                <CheckCircle size={18} /> Download Solved
-                            </button>
+                        <div className="flex-1 w-full space-y-3">
+                            <div className="text-sm text-gray-600 font-medium">
+                                📁 {file.name} <span className="text-gray-400">({(file.size / 1024).toFixed(1)} KB)</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button
+                                    onClick={handleUpload}
+                                    disabled={isUploading}
+                                    className="bg-gradient-to-r from-black to-gray-800 text-white px-4 py-3 rounded-xl font-semibold hover:from-gray-800 hover:to-black disabled:opacity-50 flex items-center justify-center gap-2 transition-all shadow-lg"
+                                >
+                                    {isUploading ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
+                                    Transform & Load
+                                </button>
+                                <button
+                                    onClick={handleDownload}
+                                    disabled={isUploading}
+                                    className="bg-white text-black border-2 border-black px-4 py-3 rounded-xl font-semibold hover:bg-gray-50 disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
+                                >
+                                    <Download size={18} />
+                                    Download Clean
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Results & Logs */}
+            {/* Results */}
             {result && (
-                <div className={`p-6 rounded-2xl border ${result.success ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'} animate-in fade-in zoom-in-95`}>
+                <div className={`p-6 rounded-2xl border-2 ${result.success ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200' : 'bg-gradient-to-br from-red-50 to-pink-50 border-red-200'}`}>
                     <div className="flex items-start gap-4">
-                        <div className={`mt-1 ${result.success ? 'text-green-600' : 'text-red-600'}`}>
-                            {result.success ? <CheckCircle size={24} /> : <AlertCircle size={24} />}
+                        <div className={`p-3 rounded-xl ${result.success ? 'bg-green-500' : 'bg-red-500'}`}>
+                            {result.success ? <CheckCircle size={24} className="text-white" /> : <AlertCircle size={24} className="text-white" />}
                         </div>
                         <div className="flex-1 space-y-4">
                             <div>
-                                <h3 className={`text-lg font-bold ${result.success ? 'text-green-900' : 'text-red-900'}`}>
-                                    {result.success ? 'Transformation Complete' : 'Transformation Failed'}
+                                <h3 className={`text-xl font-bold ${result.success ? 'text-green-900' : 'text-red-900'}`}>
+                                    {result.success ? '🎉 Transformation Complete' : '❌ Transformation Failed'}
                                 </h3>
-                                <p className="text-sm opacity-80 mt-1">
-                                    {result.success
-                                        ? `Successfully created table "${result.tableName}" with ${result.rowCount} rows.`
-                                        : "The data pipeline encountered critical errors."}
-                                </p>
+                                {result.success && result.rowCount && (
+                                    <p className="text-sm text-green-700 mt-1">
+                                        Created table <code className="bg-green-100 px-2 py-0.5 rounded font-mono">{result.tableName}</code> with {result.rowCount} records
+                                    </p>
+                                )}
                             </div>
 
-                            {/* Console / Log Output */}
-                            <div className="bg-slate-900 rounded-xl overflow-hidden shadow-inner">
+                            {/* Stats Grid */}
+                            {result.stats && (
+                                <div className="flex flex-wrap gap-2">
+                                    <StatBadge icon={Trash2} label="duplicates removed" value={result.stats.duplicates_removed} color="bg-purple-500" />
+                                    <StatBadge icon={Trash2} label="empty rows removed" value={result.stats.empty_rows_removed} color="bg-gray-500" />
+                                    <StatBadge icon={Calendar} label="dates standardized" value={result.stats.dates_standardized} color="bg-blue-500" />
+                                    <StatBadge icon={Mail} label="emails validated" value={result.stats.emails_validated} color="bg-orange-500" />
+                                    <StatBadge icon={Phone} label="phones cleaned" value={result.stats.phones_validated} color="bg-teal-500" />
+                                    <StatBadge icon={Hash} label="numbers cleaned" value={result.stats.numbers_cleaned} color="bg-indigo-500" />
+                                </div>
+                            )}
+
+                            {/* Console Logs */}
+                            <div className="bg-slate-900 rounded-xl overflow-hidden shadow-xl">
                                 <div className="bg-slate-800 px-4 py-2 flex items-center gap-2 border-b border-slate-700">
-                                    <Terminal size={14} className="text-slate-400" />
-                                    <span className="text-xs font-mono text-slate-400">System Logs</span>
+                                    <Terminal size={14} className="text-emerald-400" />
+                                    <span className="text-xs font-mono text-slate-300">Transformation Log</span>
                                 </div>
                                 <div className="p-4 font-mono text-xs space-y-1 max-h-60 overflow-y-auto">
                                     {result.logs?.map((log: string, i: number) => (
-                                        <div key={i} className="text-slate-300 border-l-2 border-slate-700 pl-2">
-                                            <span className="text-slate-500 mr-2">[{new Date().toLocaleTimeString()}]</span>
+                                        <div key={i} className="text-slate-300 border-l-2 border-emerald-500 pl-3 py-0.5">
                                             {log}
                                         </div>
                                     ))}
                                     {result.errors?.map((err: string, i: number) => (
-                                        <div key={`err-${i}`} className="text-red-400 border-l-2 border-red-500 pl-2 bg-red-900/10">
-                                            <span className="text-red-500 mr-2">[ERROR]</span>
-                                            {err}
+                                        <div key={`err-${i}`} className="text-red-400 border-l-2 border-red-500 pl-3 py-0.5 bg-red-900/20">
+                                            ❌ {err}
                                         </div>
                                     ))}
-                                    {!result.logs && !result.errors && <div className="text-slate-500 italic">No output received.</div>}
                                 </div>
                             </div>
                         </div>
