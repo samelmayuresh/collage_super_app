@@ -48,20 +48,27 @@ export default async function Home() {
         <div className="flex flex-col lg:flex-row items-center gap-12">
           <div className="flex-1 space-y-6">
             <h1 className="text-4xl lg:text-5xl font-bold leading-tight">
-              Navigating the<br />
-              educational landscape<br />
-              for success
+              Empowering Future<br />
+              Engineers with<br />
+              Digital Exellence
             </h1>
             <p className="text-gray-600 max-w-md leading-relaxed">
-              Our college super app helps students grow and succeed through a range of
-              services including course management, attendance tracking, and campus events.
+              The official digital platform for Vartak College. Experience a seamless campus life with our integrated system for admissions, academics, and attendance.
             </p>
-            <Link
-              href="/signup"
-              className="inline-block px-6 py-3 bg-black text-white rounded-xl font-medium hover:bg-gray-800 transition-colors"
-            >
-              Book a consultation
-            </Link>
+            <div className="flex gap-4">
+              <Link
+                href="/admission/register"
+                className="inline-block px-6 py-3 bg-black text-white rounded-xl font-medium hover:bg-gray-800 transition-colors"
+              >
+                Apply Now
+              </Link>
+              <Link
+                href="/signin"
+                className="inline-block px-6 py-3 bg-white border-2 border-black text-black rounded-xl font-medium hover:bg-gray-50 transition-colors"
+              >
+                Student Login
+              </Link>
+            </div>
           </div>
 
           {/* Hero Illustration */}
@@ -94,22 +101,19 @@ export default async function Home() {
       {/* Partner Logos */}
       <section className="px-8 lg:px-16 py-8 border-t border-b border-gray-200">
         <div className="flex flex-wrap items-center justify-center gap-12 text-gray-400 text-xl font-semibold">
-          <span>IIT</span>
-          <span>NIT</span>
-          <span>BITS</span>
-          <span>VIT</span>
-          <span>MIT</span>
-          <span>Stanford</span>
+          <span>AICTE Approved</span>
+          <span>DTE Recognized</span>
+          <span>Mumbai University Affiliated</span>
+          <span>NAAC Accredited</span>
         </div>
       </section>
 
       {/* Services Section */}
       <section id="services" className="px-8 lg:px-16 py-16">
         <div className="flex flex-col md:flex-row items-start gap-8 mb-12">
-          <h2 className="text-3xl font-bold bg-[#B9FF66] px-4 py-2 rounded-lg">Services</h2>
+          <h2 className="text-3xl font-bold bg-[#B9FF66] px-4 py-2 rounded-lg">Campus Services</h2>
           <p className="text-gray-600 max-w-xl">
-            At our college super app, we offer a range of services to help students
-            grow and succeed in their academic journey. These services include:
+            Streamlining every aspect of your academic journey from enrollment to graduation.
           </p>
         </div>
 
@@ -119,16 +123,17 @@ export default async function Home() {
           <div className="bg-black text-white p-8 rounded-3xl flex flex-col justify-between min-h-[240px] relative overflow-hidden">
             <div>
               <h3 className="text-xl font-bold mb-2">
-                <span className="bg-[#B9FF66] text-black px-2 py-1 rounded">Course</span>
+                <span className="bg-[#B9FF66] text-black px-2 py-1 rounded">Academic</span>
                 <br />
-                <span className="bg-white text-black px-2 py-1 rounded mt-1 inline-block">management</span>
+                <span className="bg-white text-black px-2 py-1 rounded mt-1 inline-block">Academics</span>
               </h3>
+              <p className="text-gray-400 mt-4 text-sm">Access syllabus, lecture notes, and exam schedules instantly.</p>
             </div>
             <Link href="#" className="flex items-center gap-2 text-[#B9FF66] font-medium hover:underline">
               <div className="w-6 h-6 bg-[#B9FF66] rounded-full flex items-center justify-center">
                 <span className="text-black text-xs">→</span>
               </div>
-              Learn more
+              Explore Courses
             </Link>
             <div className="absolute right-8 top-1/2 -translate-y-1/2 opacity-20">
               <BookOpen size={100} />
@@ -139,16 +144,17 @@ export default async function Home() {
           <div className="bg-white border-2 border-black p-8 rounded-3xl flex flex-col justify-between min-h-[240px] relative overflow-hidden">
             <div>
               <h3 className="text-xl font-bold mb-2">
-                <span className="bg-[#B9FF66] px-2 py-1 rounded">Attendance</span>
+                <span className="bg-[#B9FF66] px-2 py-1 rounded">Digital</span>
                 <br />
-                <span className="bg-white px-2 py-1 rounded mt-1 inline-block">tracking</span>
+                <span className="bg-white px-2 py-1 rounded mt-1 inline-block">Attendance</span>
               </h3>
+              <p className="text-gray-600 mt-4 text-sm">Real-time attendance tracking and detailed reports for students and parents.</p>
             </div>
             <Link href="#" className="flex items-center gap-2 font-medium hover:underline">
               <div className="w-6 h-6 bg-black rounded-full flex items-center justify-center">
                 <span className="text-white text-xs">→</span>
               </div>
-              Learn more
+              Check Policy
             </Link>
             <div className="absolute right-8 top-1/2 -translate-y-1/2 opacity-10">
               <Calendar size={100} />
@@ -159,16 +165,17 @@ export default async function Home() {
           <div className="bg-white border-2 border-black p-8 rounded-3xl flex flex-col justify-between min-h-[240px] relative overflow-hidden">
             <div>
               <h3 className="text-xl font-bold mb-2">
-                <span className="bg-[#B9FF66] px-2 py-1 rounded">Student</span>
+                <span className="bg-[#B9FF66] px-2 py-1 rounded">Placement</span>
                 <br />
-                <span className="bg-white px-2 py-1 rounded mt-1 inline-block">community</span>
+                <span className="bg-white px-2 py-1 rounded mt-1 inline-block">Cell</span>
               </h3>
+              <p className="text-gray-600 mt-4 text-sm">Training, internships, and placement opportunities with top recruiters.</p>
             </div>
             <Link href="#" className="flex items-center gap-2 font-medium hover:underline">
               <div className="w-6 h-6 bg-black rounded-full flex items-center justify-center">
                 <span className="text-white text-xs">→</span>
               </div>
-              Learn more
+              Placements
             </Link>
             <div className="absolute right-8 top-1/2 -translate-y-1/2 opacity-10">
               <Users size={100} />
@@ -179,16 +186,17 @@ export default async function Home() {
           <div className="bg-black text-white p-8 rounded-3xl flex flex-col justify-between min-h-[240px] relative overflow-hidden">
             <div>
               <h3 className="text-xl font-bold mb-2">
-                <span className="bg-[#B9FF66] text-black px-2 py-1 rounded">Campus</span>
+                <span className="bg-[#B9FF66] text-black px-2 py-1 rounded">Admission</span>
                 <br />
-                <span className="bg-white text-black px-2 py-1 rounded mt-1 inline-block">events</span>
+                <span className="bg-white text-black px-2 py-1 rounded mt-1 inline-block">Portal</span>
               </h3>
+              <p className="text-gray-400 mt-4 text-sm">Seamless online admission process for FY and Direct Second Year.</p>
             </div>
-            <Link href="#" className="flex items-center gap-2 text-[#B9FF66] font-medium hover:underline">
+            <Link href="/admission/register" className="flex items-center gap-2 text-[#B9FF66] font-medium hover:underline">
               <div className="w-6 h-6 bg-[#B9FF66] rounded-full flex items-center justify-center">
                 <span className="text-black text-xs">→</span>
               </div>
-              Learn more
+              Apply Now
             </Link>
             <div className="absolute right-8 top-1/2 -translate-y-1/2 opacity-20">
               <Award size={100} />
@@ -201,16 +209,15 @@ export default async function Home() {
       <section className="px-8 lg:px-16 py-16">
         <div className="bg-[#F3F3F3] border-2 border-black rounded-3xl p-8 lg:p-12 flex flex-col lg:flex-row items-center justify-between gap-8">
           <div className="flex-1 space-y-4">
-            <h2 className="text-2xl lg:text-3xl font-bold">Let&apos;s make things happen</h2>
+            <h2 className="text-2xl lg:text-3xl font-bold">Ready to join Vartak?</h2>
             <p className="text-gray-600 max-w-md">
-              Contact us today to learn more about how our college super app
-              can help you succeed in your academic journey.
+              Start your journey towards a successful engineering career. Admissions are open for the upcoming academic year.
             </p>
             <Link
-              href="/signup"
+              href="/admission/register"
               className="inline-block px-6 py-3 bg-black text-white rounded-xl font-medium hover:bg-gray-800 transition-colors"
             >
-              Get your free proposal
+              Start Admission
             </Link>
           </div>
           <div className="flex-shrink-0">
@@ -224,52 +231,39 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Case Studies Section */}
+      {/* Stats Section */}
       <section className="px-8 lg:px-16 py-16">
         <div className="flex flex-col md:flex-row items-start gap-8 mb-12">
-          <h2 className="text-3xl font-bold bg-[#B9FF66] px-4 py-2 rounded-lg">Success Stories</h2>
+          <h2 className="text-3xl font-bold bg-[#B9FF66] px-4 py-2 rounded-lg">Why Choose Us</h2>
           <p className="text-gray-600 max-w-xl">
-            Explore Real-Life Examples of Our Students&apos; Academic Success
-            through Our Case Studies
+            A tradition of excellence in technical education.
           </p>
         </div>
 
         <div className="bg-black text-white rounded-3xl p-8 lg:p-12">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 divide-y md:divide-y-0 md:divide-x divide-gray-700">
-            {/* Story 1 */}
-            <div className="space-y-4 md:pr-8">
+            {/* Stat 1 */}
+            <div className="space-y-4 md:pr-8 text-center md:text-left">
+              <p className="text-5xl font-extrabold text-[#B9FF66]">25+</p>
               <p className="text-gray-300 text-sm leading-relaxed">
-                For a first-year student, we implemented a comprehensive study plan
-                that resulted in a 50% increase in academic performance and a
-                25% improvement in attendance.
+                Years of Excellence in Engineering Education, shaping minds since inception.
               </p>
-              <Link href="#" className="flex items-center gap-2 text-[#B9FF66] font-medium hover:underline">
-                Learn more →
-              </Link>
             </div>
 
-            {/* Story 2 */}
-            <div className="space-y-4 md:px-8 pt-8 md:pt-0">
+            {/* Stat 2 */}
+            <div className="space-y-4 md:px-8 pt-8 md:pt-0 text-center md:text-left">
+              <p className="text-5xl font-extrabold text-[#B9FF66]">100%</p>
               <p className="text-gray-300 text-sm leading-relaxed">
-                For a computer science major, we optimized their course schedule
-                that resulted in a first-class ranking for key subjects and a 300%
-                increase in project submissions.
+                Placement assistance with top-tier MNCs and core companies visiting campus.
               </p>
-              <Link href="#" className="flex items-center gap-2 text-[#B9FF66] font-medium hover:underline">
-                Learn more →
-              </Link>
             </div>
 
-            {/* Story 3 */}
-            <div className="space-y-4 md:pl-8 pt-8 md:pt-0">
+            {/* Stat 3 */}
+            <div className="space-y-4 md:pl-8 pt-8 md:pt-0 text-center md:text-left">
+              <p className="text-5xl font-extrabold text-[#B9FF66]">5000+</p>
               <p className="text-gray-300 text-sm leading-relaxed">
-                For a national scholarship winner, we created a tailored study
-                campaign that increased their GPA by 35% and
-                generated a 20% increase in extracurricular activities.
+                Strong Alumni Network placed across the globe in various leadership roles.
               </p>
-              <Link href="#" className="flex items-center gap-2 text-[#B9FF66] font-medium hover:underline">
-                Learn more →
-              </Link>
             </div>
           </div>
         </div>
