@@ -1,6 +1,7 @@
 import { getSession } from '../actions/auth';
 import { BookOpen, Users, Calendar, Award, GraduationCap } from 'lucide-react';
 import Link from 'next/link';
+import Chatbot from '../components/Chatbot';
 
 export default async function Home() {
   const session = await getSession();
@@ -298,6 +299,9 @@ export default async function Home() {
           © 2024 VARTAK_SA. All rights reserved.
         </div>
       </footer>
+
+      {/* Chatbot Widget */}
+      <Chatbot />
     </div>
   );
 }
