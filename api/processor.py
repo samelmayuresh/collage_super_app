@@ -46,12 +46,26 @@ def magic_transform(df, logs):
     if changes["empty_removed"] > 0:
         logs.append(f"🗑️ Removed {changes['empty_removed']} completely empty rows")
     
-    # === 3. REMOVE DUPLICATES ===
+    # === 3. SMART DEDUPLICATION (based on name, phone, email, id) ===
+    dedup_cols = []
+    for col in df.columns:
+        col_lower = col.lower()
+        if any(x in col_lower for x in ['name', 'phone', 'mobile', 'email', 'id', 'roll', 'enrollment']):
+            dedup_cols.append(col)
+    
     before = len(df)
-    df = df.drop_duplicates()
-    changes["duplicates"] = before - len(df)
-    if changes["duplicates"] > 0:
-        logs.append(f"♻️ Removed {changes['duplicates']} duplicate rows")
+    if dedup_cols:
+        # Remove duplicates based on key columns (keeps first occurrence)
+        df = df.drop_duplicates(subset=dedup_cols, keep='first')
+        changes["duplicates"] = before - len(df)
+        if changes["duplicates"] > 0:
+            logs.append(f"♻️ Removed {changes['duplicates']} duplicates (matched on: {', '.join(dedup_cols)})")
+    else:
+        # Fallback to exact row duplicates
+        df = df.drop_duplicates()
+        changes["duplicates"] = before - len(df)
+        if changes["duplicates"] > 0:
+            logs.append(f"♻️ Removed {changes['duplicates']} exact duplicate rows")
     
     # === 4. PROCESS EACH COLUMN BASED ON NAME/CONTENT ===
     for col in df.columns:
