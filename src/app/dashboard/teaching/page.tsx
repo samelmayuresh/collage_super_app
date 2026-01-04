@@ -1,6 +1,7 @@
 import { getSession, getFullProfile } from '../../../actions/auth';
 import { Calendar } from '../../../components/dashboard/Calendar';
 import { Search, Bell, ChevronLeft, ChevronRight, User, Clock, FileText, CheckCircle, Search as SearchIcon } from 'lucide-react';
+import { TeachingAnalytics } from '../../../components/dashboard/TeachingAnalytics';
 
 export default async function TeachingDashboard() {
     const session = await getSession();
@@ -172,6 +173,9 @@ export default async function TeachingDashboard() {
                         </table>
                     </div>
                 </div>
+
+                {/* Analytics Charts */}
+                <TeachingAnalytics />
             </div>
 
             {/* Right Panel */}
