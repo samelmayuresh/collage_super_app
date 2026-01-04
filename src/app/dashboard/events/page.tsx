@@ -2,6 +2,7 @@ import { getSession } from '../../../actions/auth';
 import { getEvents } from '../../../actions/events';
 import { Calendar, MapPin, Clock, ArrowLeft, Tag } from 'lucide-react';
 import Link from 'next/link';
+import { EventDescription } from '../../../components/dashboard/EventDescription';
 
 const eventTypeColors: Record<string, string> = {
     general: 'bg-gray-100 text-gray-700',
@@ -68,9 +69,10 @@ export default async function EventsPage() {
                                     </div>
                                 )}
 
+
                                 {/* Title & Desc */}
                                 <h3 className="text-xl font-bold text-gray-800 mb-2 line-clamp-2">{event.title}</h3>
-                                <p className="text-gray-500 text-sm mb-4 line-clamp-3">{event.description}</p>
+                                <EventDescription text={event.description} />
 
                                 {/* Links */}
                                 {event.links && event.links.length > 0 && (
