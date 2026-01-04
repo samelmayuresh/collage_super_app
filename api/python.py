@@ -1,39 +1,41 @@
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from processor import process_file_and_load, sanitize_column_name
 import shutil
 import os
-from dotenv import load_dotenv
+import sys
 
-# Load env from parent directory
-load_dotenv(dotenv_path="../.env")
+# Attempt import from neighbor file
+try:
+    from .processor import process_file_and_load, sanitize_column_name
+except ImportError:
+    from processor import process_file_and_load, sanitize_column_name
 
-app = FastAPI()
+# Vercel Serverless Function entry point
+app = FastAPI(docs_url="/api/docs", openapi_url="/api/openapi.json")
 
-# Allow CORS for Next.js frontend
+# Allow CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"], # Allow all for Vercel deployment flexibility
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Get DB URL from env or use default (fallback provided by user)
-DB_URL = os.getenv("DATABASE_URL_DATA_PIPELINE")
+# Get DB URL
+DB_URL = os.environ.get("DATABASE_URL_DATA_PIPELINE")
 if not DB_URL:
-    # Fallback to the specific URL provided in prompt if env reading fails
+    # Fallback to the specific URL provided if env missing
     DB_URL = "postgresql://neondb_owner:npg_oAtEjxT0ONC7@ep-soft-wind-ah63auwy-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
 
-# Ensure clean string for SQLAlchemy
-if DB_URL.startswith("postgresql://"):
+if DB_URL and DB_URL.startswith("postgresql://"):
     DB_URL = DB_URL.replace("postgresql://", "postgresql+psycopg2://")
 
-@app.get("/")
+@app.get("/api/python")
 def read_root():
-    return {"status": "Python Data Pipeline Service Running"}
+    return {"status": "Vercel Python Service Running"}
 
-@app.post("/upload")
+@app.post("/api/python/upload")
 async def upload_file(
     file: UploadFile = File(...),
     table_name: str = Form(...)
@@ -41,13 +43,13 @@ async def upload_file(
     if not file:
         raise HTTPException(status_code=400, detail="No file uploaded")
     
-    # Create a temporary file to read
-    temp_filename = f"temp_{file.filename}"
+    # On Serverless, we must use /tmp for temp files
+    temp_filename = f"/tmp/{file.filename}" if os.path.exists("/tmp") else file.filename
+    
     try:
         with open(temp_filename, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
             
-        # Process
         with open(temp_filename, "rb") as f:
             sanitized_table = sanitize_column_name(table_name)
             if not sanitized_table:
@@ -58,13 +60,10 @@ async def upload_file(
         return result
 
     except Exception as e:
+        import traceback
+        print(traceback.format_exc())
         return {"success": False, "errors": [str(e)], "logs": ["Server Error"]}
     
     finally:
-        # Cleanup
         if os.path.exists(temp_filename):
             os.remove(temp_filename)
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)

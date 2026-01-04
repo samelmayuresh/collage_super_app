@@ -32,8 +32,8 @@ export default function DataImporter() {
         formData.append('table_name', tableName);
 
         try {
-            // Call Python Microservice
-            const response = await fetch('http://localhost:8000/upload', {
+            // Call Python Microservice (via Next.js Rewrite or Vercel Route)
+            const response = await fetch('/api/python/upload', {
                 method: 'POST',
                 body: formData,
             });
