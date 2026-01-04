@@ -4,24 +4,25 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { LayoutDashboard, Building2, Layers, DoorOpen, LogOut, Menu, X, MapPin, User } from 'lucide-react';
 import { logout } from '../../actions/auth';
+import { UserCard } from './UserCard';
 
 export function StaffSidebar() {
     const [isOpen, setIsOpen] = useState(false);
 
-    const linkClass = "flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all font-medium";
-    const activeClass = "flex items-center gap-3 px-4 py-3 text-green-600 bg-green-50 rounded-xl transition-all font-bold";
+    const linkClass = "flex items-center gap-3 p-3 text-gray-600 hover:bg-white rounded-xl transition-colors font-medium";
+    const activeClass = "flex items-center gap-3 p-3 bg-green-600 text-white rounded-xl font-medium";
 
     return (
         <>
             {/* Mobile Header */}
-            <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white px-4 py-3 flex items-center justify-between border-b border-gray-100 shadow-sm">
+            <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-[#ECFDF5] px-4 py-3 flex items-center justify-between border-b border-green-100/50">
                 <div className="flex items-center gap-2">
                     <img src="/logo.png" alt="VARTAK_SA" className="w-8 h-8 object-contain" />
-                    <span className="font-bold text-lg text-slate-800">VARTAK_SA</span>
+                    <span className="font-bold text-lg">VARTAK_SA</span>
                 </div>
                 <button
                     onClick={() => setIsOpen(!isOpen)}
-                    className="p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="p-2 text-gray-700 hover:bg-white rounded-lg transition-colors"
                 >
                     {isOpen ? <X size={24} /> : <Menu size={24} />}
                 </button>
@@ -37,10 +38,15 @@ export function StaffSidebar() {
 
             {/* Mobile Slide-out Menu */}
             <aside className={`
-                lg:hidden fixed top-14 left-0 bottom-0 w-64 bg-white z-50 transform transition-transform duration-300 ease-in-out shadow-lg
+                lg:hidden fixed top-14 left-0 bottom-0 w-72 bg-[#ECFDF5] z-50 transform transition-transform duration-300 ease-in-out overflow-y-auto
                 ${isOpen ? 'translate-x-0' : '-translate-x-full'}
             `}>
-                <nav className="flex flex-col gap-2 p-4">
+                {/* User Card */}
+                <div className="p-4">
+                    <UserCard accentColor="green" />
+                </div>
+
+                <nav className="flex flex-col gap-2 px-4 pb-4">
                     <Link href="/dashboard/staff" onClick={() => setIsOpen(false)} className={activeClass}>
                         <LayoutDashboard size={20} />
                         <span>Dashboard</span>
@@ -67,7 +73,7 @@ export function StaffSidebar() {
                     </Link>
 
                     <form action={logout} className="mt-4">
-                        <button type="submit" className={linkClass + " w-full text-red-500 hover:text-red-600 hover:bg-red-50"}>
+                        <button type="submit" className="flex items-center gap-3 p-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors w-full font-medium">
                             <LogOut size={20} />
                             <span>Logout</span>
                         </button>
@@ -76,13 +82,20 @@ export function StaffSidebar() {
             </aside>
 
             {/* Desktop Sidebar */}
-            <aside className="hidden lg:flex w-64 bg-white flex-col py-8 px-6 border-r border-gray-100">
-                <div className="mb-10 flex items-center gap-2 px-2">
-                    <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center text-white font-bold">S</div>
-                    <span className="text-xl font-bold text-slate-800">Staff Panel</span>
+            <aside className="hidden lg:flex w-64 bg-[#ECFDF5] flex-col border-r border-green-100/50 h-screen sticky top-0">
+                {/* Logo */}
+                <div className="flex items-center gap-2 px-6 py-4 border-b border-green-100/50">
+                    <img src="/logo.png" alt="VARTAK_SA" className="w-8 h-8 object-contain" />
+                    <span className="font-bold text-lg">VARTAK_SA</span>
                 </div>
 
-                <nav className="flex-1 flex flex-col gap-2">
+                {/* User Card */}
+                <div className="p-4">
+                    <UserCard accentColor="green" />
+                </div>
+
+                {/* Navigation */}
+                <nav className="flex-1 flex flex-col gap-2 px-4 overflow-y-auto">
                     <Link href="/dashboard/staff" className={activeClass}>
                         <LayoutDashboard size={20} />
                         <span>Dashboard</span>
@@ -103,15 +116,16 @@ export function StaffSidebar() {
                         <MapPin size={20} />
                         <span>Floor Locations</span>
                     </Link>
-                    <Link href="/dashboard/staff/profile" className={linkClass}>
-                        <User size={20} />
-                        <span>Profile</span>
-                    </Link>
                 </nav>
 
-                <div className="mt-auto">
+                {/* Footer */}
+                <div className="p-4 border-t border-green-100/50 flex flex-col gap-2">
+                    <Link href="/dashboard/staff/profile" className={linkClass}>
+                        <User size={20} />
+                        <span>Edit Profile</span>
+                    </Link>
                     <form action={logout}>
-                        <button type="submit" className={linkClass + " w-full text-red-500 hover:text-red-600 hover:bg-red-50"}>
+                        <button type="submit" className="flex items-center gap-3 p-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors w-full font-medium">
                             <LogOut size={20} />
                             <span>Logout</span>
                         </button>

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Home, Calendar, Book, Settings, User, LogOut, Menu, X, Camera } from 'lucide-react';
 import { logout } from '../../actions/auth';
-import { StudentCard } from './StudentCard';
+import { UserCard } from './UserCard';
 
 export function StudentSidebar() {
     const [isOpen, setIsOpen] = useState(false);
@@ -40,7 +40,7 @@ export function StudentSidebar() {
             `}>
                 {/* Student Card in Mobile */}
                 <div className="p-4">
-                    <StudentCard />
+                    <UserCard accentColor="orange" />
                 </div>
 
                 <nav className="flex flex-col gap-2 px-4 pb-4">
@@ -115,7 +115,7 @@ export function StudentSidebar() {
 
                 {/* Student Card */}
                 <div className="p-4">
-                    <StudentCard />
+                    <UserCard accentColor="orange" />
                 </div>
 
                 {/* Navigation */}
