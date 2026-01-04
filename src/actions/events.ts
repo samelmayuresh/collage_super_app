@@ -43,12 +43,26 @@ export async function createEvent(data: {
     is_mandatory?: boolean;
     target_roles?: string[];
     created_by: number;
+    images?: string[];
+    links?: { title: string; url: string }[];
 }) {
     try {
         const result = await pool.query(
-            `INSERT INTO events (title, description, event_type, start_date, end_date, location, is_mandatory, target_roles, created_by)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-            [data.title, data.description, data.event_type || 'general', data.start_date, data.end_date, data.location, data.is_mandatory, data.target_roles, data.created_by]
+            `INSERT INTO events (title, description, event_type, start_date, end_date, location, is_mandatory, target_roles, created_by, images, links)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+            [
+                data.title,
+                data.description,
+                data.event_type || 'general',
+                data.start_date,
+                data.end_date,
+                data.location,
+                data.is_mandatory,
+                data.target_roles,
+                data.created_by,
+                data.images || [],
+                JSON.stringify(data.links || [])
+            ]
         );
         return { success: true, event: result.rows[0] };
     } catch (error: any) {

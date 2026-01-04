@@ -11,6 +11,8 @@ interface Event {
     start_date: string;
     location: string;
     is_mandatory: boolean;
+    images?: string[];
+    links?: { title: string; url: string }[];
 }
 
 interface Announcement {
@@ -71,7 +73,12 @@ export function EventsCard({ events }: { events: Event[] }) {
                 {events.slice(0, 3).map((event) => (
                     <div key={event.id} className="p-4 rounded-xl bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-100 hover:shadow-md transition-shadow">
                         <div className="flex items-start justify-between">
-                            <div>
+                            <div className="w-full">
+                                {event.images && event.images.length > 0 && (
+                                    <div className="h-32 mb-3 rounded-lg overflow-hidden w-full bg-gray-200">
+                                        <img src={event.images[0]} alt={event.title} className="w-full h-full object-cover" />
+                                    </div>
+                                )}
                                 <div className="flex items-center gap-2 mb-1">
                                     <span className={`text-xs px-2 py-0.5 rounded-full ${eventTypeColors[event.event_type] || eventTypeColors.general}`}>
                                         {event.event_type}
@@ -82,6 +89,16 @@ export function EventsCard({ events }: { events: Event[] }) {
                                 </div>
                                 <h4 className="font-semibold text-gray-800">{event.title}</h4>
                                 <p className="text-sm text-gray-500 mt-1">{event.description?.slice(0, 80)}...</p>
+
+                                {event.links && event.links.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                        {event.links.map((link, i) => (
+                                            <a key={i} href={link.url} target="_blank" rel="noreferrer" className="text-xs bg-white text-violet-600 border border-violet-200 px-2 py-1 rounded hover:bg-violet-50 truncate max-w-[150px]">
+                                                {link.title} 🔗
+                                            </a>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">

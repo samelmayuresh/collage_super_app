@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Plus, Calendar, Megaphone, X, Save, MapPin, Clock, Users } from 'lucide-react';
+import { CldUploadWidget } from 'next-cloudinary';
 
 interface EventFormData {
     title: string;
@@ -26,7 +27,7 @@ interface AnnouncementFormData {
 export function EventCreator({ userId, onCreated }: { userId: number; onCreated?: () => void }) {
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [form, setForm] = useState<EventFormData>({
+    const [form, setForm] = useState<EventFormData & { images: string[], links: { title: string; url: string }[] }>({
         title: '',
         description: '',
         event_type: 'general',
@@ -34,8 +35,12 @@ export function EventCreator({ userId, onCreated }: { userId: number; onCreated?
         end_date: '',
         location: '',
         is_mandatory: false,
-        target_roles: []
+        target_roles: [],
+        images: [],
+        links: []
     });
+
+    const [newLink, setNewLink] = useState({ title: '', url: '' });
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -48,7 +53,7 @@ export function EventCreator({ userId, onCreated }: { userId: number; onCreated?
             });
             if (res.ok) {
                 setIsOpen(false);
-                setForm({ title: '', description: '', event_type: 'general', start_date: '', end_date: '', location: '', is_mandatory: false, target_roles: [] });
+                setForm({ title: '', description: '', event_type: 'general', start_date: '', end_date: '', location: '', is_mandatory: false, target_roles: [], images: [], links: [] });
                 onCreated?.();
                 alert('Event created successfully!');
             } else {
@@ -60,6 +65,19 @@ export function EventCreator({ userId, onCreated }: { userId: number; onCreated?
             alert(`Error: ${error.message}`);
         }
         setLoading(false);
+    };
+
+    const handleImageUpload = (result: any) => {
+        if (result.info?.secure_url) {
+            setForm(prev => ({ ...prev, images: [...prev.images, result.info.secure_url] }));
+        }
+    };
+
+    const addLink = () => {
+        if (newLink.title && newLink.url) {
+            setForm(prev => ({ ...prev, links: [...prev.links, newLink] }));
+            setNewLink({ title: '', url: '' });
+        }
     };
 
     return (
@@ -102,6 +120,84 @@ export function EventCreator({ userId, onCreated }: { userId: number; onCreated?
                                     onChange={e => setForm({ ...form, description: e.target.value })}
                                     className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-violet-500 resize-none h-24"
                                 />
+                            </div>
+
+                            {/* Image Upload */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Images</label>
+                                <div className="flex flex-wrap gap-2 mb-2">
+                                    {form.images.map((img, idx) => (
+                                        <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border">
+                                            <img src={img} alt="Preview" className="w-full h-full object-cover" />
+                                            <button
+                                                type="button"
+                                                onClick={() => setForm(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== idx) }))}
+                                                className="absolute top-0 right-0 bg-red-500 text-white p-0.5 rounded-bl"
+                                            >
+                                                <X size={10} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    <CldUploadWidget
+                                        uploadPreset="TICKMAN"
+                                        onSuccess={handleImageUpload}
+                                        options={{ maxFiles: 5, resourceType: 'image' }}
+                                    >
+                                        {({ open }) => (
+                                            <button
+                                                type="button"
+                                                onClick={() => open()}
+                                                className="w-16 h-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-400 hover:border-violet-500 hover:text-violet-500 transition-colors"
+                                            >
+                                                <Plus size={24} />
+                                            </button>
+                                        )}
+                                    </CldUploadWidget>
+                                </div>
+                            </div>
+
+                            {/* Links */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Attachments / Links</label>
+                                <div className="space-y-2 mb-2">
+                                    {form.links.map((link, idx) => (
+                                        <div key={idx} className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded-lg border">
+                                            <a href={link.url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline truncate max-w-[80%]">
+                                                {link.title}
+                                            </a>
+                                            <button
+                                                type="button"
+                                                onClick={() => setForm(prev => ({ ...prev, links: prev.links.filter((_, i) => i !== idx) }))}
+                                                className="text-red-400 hover:text-red-500"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Link Title"
+                                        value={newLink.title}
+                                        onChange={e => setNewLink(prev => ({ ...prev, title: e.target.value }))}
+                                        className="flex-1 px-3 py-2 border rounded-xl text-sm"
+                                    />
+                                    <input
+                                        type="url"
+                                        placeholder="URL (https://...)"
+                                        value={newLink.url}
+                                        onChange={e => setNewLink(prev => ({ ...prev, url: e.target.value }))}
+                                        className="flex-1 px-3 py-2 border rounded-xl text-sm"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={addLink}
+                                        className="px-3 py-2 bg-gray-100 rounded-xl hover:bg-gray-200"
+                                    >
+                                        <Plus size={18} />
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">

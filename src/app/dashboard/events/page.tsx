@@ -61,9 +61,33 @@ export default async function EventsPage() {
                                     )}
                                 </div>
 
+                                {/* Image */}
+                                {event.images && event.images.length > 0 && (
+                                    <div className="h-48 mb-4 rounded-xl overflow-hidden bg-gray-100">
+                                        <img src={event.images[0]} alt={event.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                    </div>
+                                )}
+
                                 {/* Title & Desc */}
                                 <h3 className="text-xl font-bold text-gray-800 mb-2 line-clamp-2">{event.title}</h3>
-                                <p className="text-gray-500 text-sm mb-6 line-clamp-3">{event.description}</p>
+                                <p className="text-gray-500 text-sm mb-4 line-clamp-3">{event.description}</p>
+
+                                {/* Links */}
+                                {event.links && event.links.length > 0 && (
+                                    <div className="flex flex-wrap gap-2 mb-6">
+                                        {event.links.map((link: any, i: number) => (
+                                            <a
+                                                key={i}
+                                                href={link.url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="inline-flex items-center gap-1.5 text-xs font-medium bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors"
+                                            >
+                                                <Tag size={12} /> {link.title}
+                                            </a>
+                                        ))}
+                                    </div>
+                                )}
 
                                 {/* Meta Info */}
                                 <div className="space-y-3 pt-4 border-t border-gray-50">
