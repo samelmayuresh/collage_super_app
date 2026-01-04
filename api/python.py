@@ -67,3 +67,41 @@ async def upload_file(
     finally:
         if os.path.exists(temp_filename):
             os.remove(temp_filename)
+
+from fastapi.responses import Response
+
+@app.post("/api/python/download")
+async def download_file(
+    file: UploadFile = File(...),
+    table_name: str = Form("export")
+):
+    if not file:
+        raise HTTPException(status_code=400, detail="No file uploaded")
+    
+    temp_filename = f"/tmp/{file.filename}" if os.path.exists("/tmp") else file.filename
+    
+    try:
+        with open(temp_filename, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        with open(temp_filename, "rb") as f:
+            # We don't need DB URL for download/cleaning only, but passing it is fine or pass None if handled
+            result = process_file_and_load(f, file.filename, table_name, DB_URL, dry_run=True, return_file=True)
+            
+        if result["success"]:
+            return Response(
+                content=result["csv_content"], 
+                media_type="text/csv", 
+                headers={"Content-Disposition": f"attachment; filename=cleaned_{file.filename}.csv"}
+            )
+        else:
+            return result
+
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return {"success": False, "errors": [str(e)], "logs": ["Server Error"]}
+    
+    finally:
+        if os.path.exists(temp_filename):
+            os.remove(temp_filename)

@@ -10,7 +10,7 @@ def sanitize_column_name(col_name):
     clean = re.sub(r'_+', '_', clean.lower())
     return clean.strip('_')
 
-def process_file_and_load(file_obj, filename, table_name, db_url):
+def process_file_and_load(file_obj, filename, table_name, db_url, dry_run=False, return_file=False):
     logs = []
     errors = []
     
@@ -54,17 +54,26 @@ def process_file_and_load(file_obj, filename, table_name, db_url):
             errors.append("Dataset is empty after cleaning.")
             return {"success": False, "logs": logs, "errors": errors}
 
-        # 4. Database Loading
-        logs.append(f"Connecting to database to create table: {table_name}")
-        
-        engine = create_engine(db_url)
-        
-        # Use a transaction
-        with engine.begin() as connection:
-            # We replace if exists for this tool as per typical 'import' behavior
-            df.to_sql(table_name, con=connection, if_exists='replace', index=False)
-        
-        logs.append(f"Successfully created table '{table_name}' and inserted {len(df)} rows.")
+        # Return file content if requested (for download)
+        if return_file:
+            return {
+                "success": True,
+                "csv_content": df.to_csv(index=False),
+                "logs": logs
+            }
+
+        if not dry_run:
+            # 4. Database Loading
+            logs.append(f"Connecting to database to create table: {table_name}")
+            
+            engine = create_engine(db_url)
+            
+            # Use a transaction
+            with engine.begin() as connection:
+                # We replace if exists for this tool as per typical 'import' behavior
+                df.to_sql(table_name, con=connection, if_exists='replace', index=False)
+            
+            logs.append(f"Successfully created table '{table_name}' and inserted {len(df)} rows.")
         
         return {
             "success": True,

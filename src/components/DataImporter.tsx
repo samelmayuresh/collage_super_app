@@ -21,6 +21,39 @@ export default function DataImporter() {
         }
     };
 
+    const handleDownload = async () => {
+        if (!file) return;
+        setIsUploading(true);
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('table_name', 'export');
+
+        try {
+            const response = await fetch('/api/python/download', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) throw new Error("Download failed");
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `cleaned_${file.name.split('.')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            setResult({ success: true, tableName: "Downloaded File", rowCount: "N/A", logs: ["File downloaded successfully."] });
+        } catch (error) {
+            console.error(error);
+            setResult({ success: false, errors: ["Download failed."] });
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
     const handleUpload = async () => {
         if (!file || !tableName) return;
 
@@ -38,13 +71,18 @@ export default function DataImporter() {
                 body: formData,
             });
 
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`Server responded with ${response.status}: ${text.substring(0, 100)}`);
+            }
+
             const data = await response.json();
             setResult(data);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Upload failed", error);
             setResult({
                 success: false,
-                errors: ["Failed to connect to Python Data Service. ensure backend is running."]
+                errors: [`Connection Failed: ${error.message}. Ensure backend is running and Next.js server was restarted.`]
             });
         } finally {
             setIsUploading(false);
@@ -85,21 +123,23 @@ export default function DataImporter() {
                                 placeholder="e.g. students_2024"
                             />
                         </div>
-                        <div className="flex-1 w-full">
-                            <div className="text-sm text-gray-500 mb-2">Selected: {file.name} ({(file.size / 1024).toFixed(1)} KB)</div>
+                        <div className="flex-1 w-full grid grid-cols-2 gap-2">
+                            <div className="col-span-2 text-sm text-gray-500 mb-2">Selected: {file.name} ({(file.size / 1024).toFixed(1)} KB)</div>
+
                             <button
                                 onClick={handleUpload}
                                 disabled={isUploading}
-                                className="w-full bg-black text-white px-6 py-2 rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
+                                className="w-full bg-black text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
                             >
-                                {isUploading ? (
-                                    <>
-                                        <Loader2 className="animate-spin" size={18} />
-                                        Processing...
-                                    </>
-                                ) : (
-                                    <>Start Transformation</>
-                                )}
+                                {isUploading ? <Loader2 className="animate-spin" size={18} /> : "Start Transformation"}
+                            </button>
+
+                            <button
+                                onClick={handleDownload}
+                                disabled={isUploading}
+                                className="w-full bg-white text-black border-2 border-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
+                            >
+                                <CheckCircle size={18} /> Download Solved
                             </button>
                         </div>
                     </div>
