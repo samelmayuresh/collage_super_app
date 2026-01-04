@@ -1,5 +1,6 @@
 import { getSession } from '../../../actions/auth';
 import { Search, Bell, Monitor, Briefcase, Video, Box, PenTool, User, Settings } from 'lucide-react';
+import { StudentNotificationsStatic } from '../../../components/dashboard/StudentNotifications';
 
 export default async function StudentDashboard() {
     const session = await getSession();
@@ -13,19 +14,14 @@ export default async function StudentDashboard() {
             <div className="flex-1 overflow-y-auto p-8 lg:p-12 space-y-8">
                 {/* Header / Search */}
                 <div className="flex items-center justify-between">
-                    <div className="relative w-full max-w-lg hidden md:block">
-                        {/* Search bar placeholder */}
-                        <div className="flex items-center bg-white rounded-full px-4 py-2 shadow-sm border border-gray-100">
-                            <Search size={18} className="text-gray-400 mr-2" />
-                            <span className="text-gray-400 text-sm">your.education</span>
-                        </div>
+                    <div>
+                        <h1 className="text-3xl font-bold text-slate-900">Welcome, {session.name}!</h1>
+                        <p className="text-gray-500">Here's what's happening today</p>
                     </div>
                 </div>
 
-                {/* Title */}
-                <div>
-                    <h1 className="text-4xl font-bold tracking-tight text-slate-900">Invest in your <br /> education</h1>
-                </div>
+                {/* Events and Announcements */}
+                <StudentNotificationsStatic />
 
                 {/* Filters */}
                 <div className="flex gap-3 overflow-x-auto pb-2">
