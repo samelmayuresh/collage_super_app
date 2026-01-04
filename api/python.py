@@ -1,107 +1,90 @@
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import shutil
+from fastapi.responses import Response
 import os
-import sys
+import traceback
 
-# Attempt import from neighbor file
+# Import processor
 try:
     from .processor import process_file_and_load, sanitize_column_name
 except ImportError:
     from processor import process_file_and_load, sanitize_column_name
 
-# Vercel Serverless Function entry point
-app = FastAPI(docs_url="/api/docs", openapi_url="/api/openapi.json")
+app = FastAPI()
 
-# Allow CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Allow all for Vercel deployment flexibility
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Get DB URL
-DB_URL = os.environ.get("DATABASE_URL_DATA_PIPELINE")
-if not DB_URL:
-    # Fallback to the specific URL provided if env missing
-    DB_URL = "postgresql://neondb_owner:npg_oAtEjxT0ONC7@ep-soft-wind-ah63auwy-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
+DB_URL = os.environ.get("DATABASE_URL_DATA_PIPELINE", 
+    "postgresql://neondb_owner:npg_oAtEjxT0ONC7@ep-soft-wind-ah63auwy-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require")
 
-if DB_URL and DB_URL.startswith("postgresql://"):
+if DB_URL.startswith("postgresql://"):
     DB_URL = DB_URL.replace("postgresql://", "postgresql+psycopg2://")
 
 @app.get("/api/python")
-def read_root():
-    return {"status": "Vercel Python Service Running"}
+def health():
+    return {"status": "Flagship Engine Ready"}
 
 @app.post("/api/python/upload")
-async def upload_file(
-    file: UploadFile = File(...),
-    table_name: str = Form(...)
-):
-    if not file:
-        raise HTTPException(status_code=400, detail="No file uploaded")
-    
-    # On Serverless, we must use /tmp for temp files
-    temp_filename = f"/tmp/{file.filename}" if os.path.exists("/tmp") else file.filename
-    
+async def upload_file(file: UploadFile = File(...), table_name: str = Form(...)):
     try:
-        with open(temp_filename, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-            
-        with open(temp_filename, "rb") as f:
-            sanitized_table = sanitize_column_name(table_name)
-            if not sanitized_table:
-                sanitized_table = "imported_data_" + sanitize_column_name(file.filename.split('.')[0])
-                
-            result = process_file_and_load(f, file.filename, sanitized_table, DB_URL)
-            
+        # Read file content
+        content = await file.read()
+        
+        # Save to temp file
+        temp_path = f"temp_{file.filename}"
+        with open(temp_path, "wb") as f:
+            f.write(content)
+        
+        # Process
+        with open(temp_path, "rb") as f:
+            table = sanitize_column_name(table_name) or "imported_data"
+            result = process_file_and_load(f, file.filename, table, DB_URL)
+        
+        # Cleanup
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        
         return result
-
+        
     except Exception as e:
-        import traceback
-        print(traceback.format_exc())
-        return {"success": False, "errors": [str(e)], "logs": ["Server Error"]}
-    
-    finally:
-        if os.path.exists(temp_filename):
-            os.remove(temp_filename)
-
-from fastapi.responses import Response
+        return {
+            "success": False,
+            "errors": [str(e)],
+            "logs": ["❌ Error occurred", traceback.format_exc()[:800]]
+        }
 
 @app.post("/api/python/download")
-async def download_file(
-    file: UploadFile = File(...),
-    table_name: str = Form("export")
-):
-    if not file:
-        raise HTTPException(status_code=400, detail="No file uploaded")
-    
-    temp_filename = f"/tmp/{file.filename}" if os.path.exists("/tmp") else file.filename
-    
+async def download_file(file: UploadFile = File(...), table_name: str = Form("export")):
     try:
-        with open(temp_filename, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-            
-        with open(temp_filename, "rb") as f:
-            # We don't need DB URL for download/cleaning only, but passing it is fine or pass None if handled
+        content = await file.read()
+        temp_path = f"temp_{file.filename}"
+        
+        with open(temp_path, "wb") as f:
+            f.write(content)
+        
+        with open(temp_path, "rb") as f:
             result = process_file_and_load(f, file.filename, table_name, DB_URL, dry_run=True, return_file=True)
-            
+        
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        
         if result["success"]:
             return Response(
-                content=result["csv_content"], 
-                media_type="text/csv", 
-                headers={"Content-Disposition": f"attachment; filename=cleaned_{file.filename}.csv"}
+                content=result["csv_content"],
+                media_type="text/csv",
+                headers={"Content-Disposition": f"attachment; filename=cleaned_{file.filename}"}
             )
-        else:
-            return result
-
+        return result
+        
     except Exception as e:
-        import traceback
-        print(traceback.format_exc())
-        return {"success": False, "errors": [str(e)], "logs": ["Server Error"]}
-    
-    finally:
-        if os.path.exists(temp_filename):
-            os.remove(temp_filename)
+        return {
+            "success": False,
+            "errors": [str(e)],
+            "logs": ["❌ Download Error", traceback.format_exc()[:800]]
+        }

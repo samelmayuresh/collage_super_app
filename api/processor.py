@@ -1,229 +1,265 @@
 """
-Flagship Data Transformation Engine
-- Advanced cleaning, normalization, and validation
+🔥 ULTIMATE DATA TRANSFORMATION ENGINE 🔥
+Makes messy data beautiful - visible, dramatic changes guaranteed!
 """
 
 import pandas as pd
-from sqlalchemy import create_engine
 import re
 import numpy as np
 from datetime import datetime
+from sqlalchemy import create_engine
 
-# ============== UTILITY FUNCTIONS ==============
+def sanitize_column_name(col):
+    """snake_case column names"""
+    if not col or pd.isna(col):
+        return "column"
+    clean = str(col).strip().lower()
+    clean = re.sub(r'[^a-z0-9]+', '_', clean)
+    clean = re.sub(r'_+', '_', clean).strip('_')
+    return clean or "column"
 
-def sanitize_column_name(col_name):
-    """Convert column name to snake_case, remove special chars"""
-    clean = re.sub(r'[^a-zA-Z0-9_\s]', '', str(col_name).strip())
-    clean = re.sub(r'\s+', '_', clean)
-    clean = re.sub(r'_+', '_', clean.lower())
-    return clean.strip('_') or 'unnamed_column'
-
-def detect_and_convert_dates(series):
-    """Try to parse various date formats"""
-    date_patterns = [
-        '%Y-%m-%d', '%d-%m-%Y', '%m-%d-%Y',
-        '%Y/%m/%d', '%d/%m/%Y', '%m/%d/%Y',
-        '%d %b %Y', '%d %B %Y', '%b %d, %Y',
-        '%Y-%m-%d %H:%M:%S', '%d-%m-%Y %H:%M:%S'
-    ]
+def magic_transform(df, logs):
+    """Apply dramatic, visible transformations"""
     
-    def try_parse(val):
-        if pd.isna(val) or str(val).strip() == '':
-            return None
-        val_str = str(val).strip()
-        for pattern in date_patterns:
-            try:
-                return datetime.strptime(val_str, pattern).strftime('%Y-%m-%d')
-            except:
-                continue
-        return val_str
-    
-    return series.apply(try_parse)
-
-def clean_numeric(val):
-    """Remove currency symbols, commas, and convert to number"""
-    if pd.isna(val):
-        return None
-    val_str = str(val).strip()
-    # Remove common currency symbols and formatting
-    val_str = re.sub(r'[₹$€£¥,\s]', '', val_str)
-    # Handle parentheses for negative numbers
-    if val_str.startswith('(') and val_str.endswith(')'):
-        val_str = '-' + val_str[1:-1]
-    try:
-        return float(val_str) if '.' in val_str else int(val_str)
-    except:
-        return None
-
-def validate_email(val):
-    """Validate and clean email addresses"""
-    if pd.isna(val) or str(val).strip() == '':
-        return None
-    email = str(val).strip().lower()
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    return email if re.match(pattern, email) else f"INVALID:{email}"
-
-def validate_phone(val):
-    """Clean and standardize phone numbers"""
-    if pd.isna(val) or str(val).strip() == '':
-        return None
-    phone = re.sub(r'[^\d+]', '', str(val))
-    # Indian phone number standardization
-    if len(phone) == 10 and phone[0] in '6789':
-        return f"+91{phone}"
-    elif len(phone) == 12 and phone.startswith('91'):
-        return f"+{phone}"
-    elif len(phone) == 13 and phone.startswith('+91'):
-        return phone
-    return phone if len(phone) >= 10 else f"INVALID:{val}"
-
-def standardize_text(val):
-    """Proper case, remove extra spaces, trim"""
-    if pd.isna(val):
-        return None
-    text = str(val).strip()
-    # Remove multiple spaces
-    text = re.sub(r'\s+', ' ', text)
-    return text
-
-def title_case_name(val):
-    """Title case for names"""
-    if pd.isna(val) or str(val).strip() == '':
-        return None
-    return ' '.join(word.capitalize() for word in str(val).strip().split())
-
-
-# ============== MAIN PROCESSING ==============
-
-def process_file_and_load(file_obj, filename, table_name, db_url, dry_run=False, return_file=False):
-    logs = []
-    errors = []
-    stats = {
-        "original_rows": 0,
-        "final_rows": 0,
-        "duplicates_removed": 0,
-        "empty_rows_removed": 0,
-        "columns_cleaned": 0,
-        "dates_standardized": 0,
-        "emails_validated": 0,
-        "phones_validated": 0,
-        "numbers_cleaned": 0
+    # Track changes
+    changes = {
+        "rows_before": len(df),
+        "duplicates": 0,
+        "empty_removed": 0,
+        "dates_fixed": 0,
+        "emails_fixed": 0,
+        "phones_fixed": 0,
+        "names_fixed": 0,
+        "numbers_fixed": 0,
+        "text_cleaned": 0
     }
     
+    # === 1. COLUMN HEADERS TO SNAKE_CASE ===
+    old_cols = df.columns.tolist()
+    df.columns = [sanitize_column_name(c) for c in df.columns]
+    logs.append(f"🏷️ Renamed {len(df.columns)} columns to snake_case")
+    
+    # === 2. REMOVE EMPTY ROWS ===
+    before = len(df)
+    df = df.dropna(how='all')
+    changes["empty_removed"] = before - len(df)
+    if changes["empty_removed"] > 0:
+        logs.append(f"🗑️ Removed {changes['empty_removed']} completely empty rows")
+    
+    # === 3. REMOVE DUPLICATES ===
+    before = len(df)
+    df = df.drop_duplicates()
+    changes["duplicates"] = before - len(df)
+    if changes["duplicates"] > 0:
+        logs.append(f"♻️ Removed {changes['duplicates']} duplicate rows")
+    
+    # === 4. PROCESS EACH COLUMN BASED ON NAME/CONTENT ===
+    for col in df.columns:
+        col_lower = col.lower()
+        
+        # --- NAMES (Title Case) ---
+        if any(x in col_lower for x in ['name', 'first', 'last', 'student', 'teacher', 'employee']):
+            def fix_name(val):
+                if pd.isna(val) or str(val).strip() == '':
+                    return ''
+                # Remove extra spaces, title case
+                name = ' '.join(str(val).strip().split())
+                return name.title()
+            
+            original = df[col].copy()
+            df[col] = df[col].apply(fix_name)
+            changed = (original != df[col]).sum()
+            if changed > 0:
+                changes["names_fixed"] += int(changed)
+                logs.append(f"👤 Fixed {changed} names in '{col}' → Title Case")
+        
+        # --- EMAILS (lowercase, validate) ---
+        elif any(x in col_lower for x in ['email', 'mail']):
+            def fix_email(val):
+                if pd.isna(val) or str(val).strip() == '':
+                    return ''
+                email = str(val).strip().lower()
+                # Basic validation
+                if '@' in email and '.' in email:
+                    return email
+                return f"[INVALID] {email}"
+            
+            original = df[col].copy()
+            df[col] = df[col].apply(fix_email)
+            changed = (original.astype(str).str.lower().str.strip() != df[col]).sum()
+            if changed > 0:
+                changes["emails_fixed"] += int(changed)
+                logs.append(f"📧 Normalized {changed} emails in '{col}'")
+        
+        # --- PHONE NUMBERS ---
+        elif any(x in col_lower for x in ['phone', 'mobile', 'cell', 'contact', 'tel']):
+            def fix_phone(val):
+                if pd.isna(val) or str(val).strip() == '':
+                    return ''
+                # Extract only digits
+                digits = re.sub(r'\D', '', str(val))
+                if len(digits) == 10:
+                    return f"+91-{digits[:5]}-{digits[5:]}"
+                elif len(digits) == 12 and digits.startswith('91'):
+                    return f"+{digits[:2]}-{digits[2:7]}-{digits[7:]}"
+                elif len(digits) > 0:
+                    return digits
+                return str(val)
+            
+            original = df[col].copy()
+            df[col] = df[col].apply(fix_phone)
+            changed = (original.astype(str) != df[col].astype(str)).sum()
+            if changed > 0:
+                changes["phones_fixed"] += int(changed)
+                logs.append(f"📱 Formatted {changed} phone numbers in '{col}'")
+        
+        # --- DATES ---
+        elif any(x in col_lower for x in ['date', 'dob', 'birth', 'created', 'joined', 'updated']):
+            def fix_date(val):
+                if pd.isna(val) or str(val).strip() == '':
+                    return ''
+                val_str = str(val).strip()
+                
+                # Try multiple date formats
+                formats = [
+                    '%Y-%m-%d', '%d-%m-%Y', '%m-%d-%Y', '%d/%m/%Y', '%m/%d/%Y',
+                    '%Y/%m/%d', '%d %b %Y', '%d %B %Y', '%b %d, %Y', '%B %d, %Y',
+                    '%d.%m.%Y', '%Y.%m.%d'
+                ]
+                for fmt in formats:
+                    try:
+                        dt = datetime.strptime(val_str, fmt)
+                        return dt.strftime('%Y-%m-%d')  # ISO format
+                    except:
+                        continue
+                
+                # Try pandas parsing
+                try:
+                    dt = pd.to_datetime(val_str, dayfirst=True)
+                    return dt.strftime('%Y-%m-%d')
+                except:
+                    return val_str
+            
+            original = df[col].copy()
+            df[col] = df[col].apply(fix_date)
+            changed = (original.astype(str) != df[col].astype(str)).sum()
+            if changed > 0:
+                changes["dates_fixed"] += int(changed)
+                logs.append(f"📅 Standardized {changed} dates in '{col}' → YYYY-MM-DD")
+        
+        # --- GENDER ---
+        elif any(x in col_lower for x in ['gender', 'sex']):
+            gender_map = {
+                'm': 'Male', 'male': 'Male', 'man': 'Male', 'boy': 'Male', 'M': 'Male',
+                'f': 'Female', 'female': 'Female', 'woman': 'Female', 'girl': 'Female', 'F': 'Female',
+                'o': 'Other', 'other': 'Other', 'O': 'Other'
+            }
+            original = df[col].copy()
+            df[col] = df[col].astype(str).str.strip().map(lambda x: gender_map.get(x.lower(), x) if pd.notna(x) else x)
+            changed = (original.astype(str) != df[col].astype(str)).sum()
+            if changed > 0:
+                logs.append(f"⚧️ Standardized {changed} gender values in '{col}'")
+        
+        # --- AMOUNTS/CURRENCY ---
+        elif any(x in col_lower for x in ['amount', 'price', 'fee', 'salary', 'cost', 'total', 'balance', 'payment']):
+            def fix_amount(val):
+                if pd.isna(val) or str(val).strip() == '':
+                    return 0.0
+                val_str = str(val)
+                # Remove currency symbols and commas
+                val_str = re.sub(r'[₹$€£¥,\s]', '', val_str)
+                # Handle negative in parentheses
+                if val_str.startswith('(') and val_str.endswith(')'):
+                    val_str = '-' + val_str[1:-1]
+                try:
+                    return float(val_str)
+                except:
+                    return 0.0
+            
+            original = df[col].copy()
+            df[col] = df[col].apply(fix_amount)
+            changes["numbers_fixed"] += 1
+            logs.append(f"💰 Cleaned currency values in '{col}'")
+        
+        # --- GENERAL TEXT CLEANUP ---
+        elif df[col].dtype == 'object':
+            def clean_text(val):
+                if pd.isna(val):
+                    return ''
+                text = str(val).strip()
+                # Remove multiple spaces
+                text = re.sub(r'\s+', ' ', text)
+                # Remove leading/trailing special chars
+                text = text.strip('.,;:!?')
+                return text
+            
+            original = df[col].copy()
+            df[col] = df[col].apply(clean_text)
+            changed = (original.astype(str) != df[col].astype(str)).sum()
+            if changed > 0:
+                changes["text_cleaned"] += int(changed)
+    
+    if changes["text_cleaned"] > 0:
+        logs.append(f"✨ Cleaned whitespace in {changes['text_cleaned']} text cells")
+    
+    # === 5. FILL REMAINING NaN ===
+    df = df.fillna('')
+    
+    changes["rows_after"] = len(df)
+    return df, changes
+
+def process_file_and_load(file_obj, filename, table_name, db_url, dry_run=False, return_file=False):
+    """Main processing function"""
+    logs = []
+    
     try:
-        logs.append("🚀 Flagship Data Engine Initialized")
+        logs.append("🚀 ULTIMATE DATA ENGINE ACTIVATED")
+        logs.append(f"📂 Processing: {filename}")
         
-        # ===== 1. INGESTION =====
-        if filename.endswith('.csv'):
-            df = pd.read_csv(file_obj, encoding='utf-8', na_values=['', 'NA', 'N/A', 'null', 'NULL', 'None', '-'])
-        elif filename.endswith(('.xls', '.xlsx')):
-            df = pd.read_excel(file_obj, na_values=['', 'NA', 'N/A', 'null', 'NULL', 'None', '-'])
+        # === LOAD FILE ===
+        if filename.lower().endswith('.csv'):
+            df = pd.read_csv(file_obj, encoding='utf-8', na_values=['', 'NA', 'N/A', 'null', 'NULL', 'None', '-', 'nan'])
+        elif filename.lower().endswith(('.xls', '.xlsx')):
+            df = pd.read_excel(file_obj, na_values=['', 'NA', 'N/A', 'null', 'NULL', 'None', '-', 'nan'])
         else:
-            raise ValueError("Unsupported format. Use CSV or Excel.")
+            return {"success": False, "errors": ["Unsupported file format"], "logs": logs}
         
-        stats["original_rows"] = len(df)
-        logs.append(f"📥 Loaded {len(df)} rows × {len(df.columns)} columns")
+        logs.append(f"📊 Loaded {len(df)} rows × {len(df.columns)} columns")
         
-        # ===== 2. COLUMN NORMALIZATION =====
-        original_cols = df.columns.tolist()
-        df.columns = [sanitize_column_name(c) for c in df.columns]
-        stats["columns_cleaned"] = len(df.columns)
-        logs.append(f"🏷️ Normalized {len(df.columns)} column headers to snake_case")
+        # === MAGIC TRANSFORMATION ===
+        df, stats = magic_transform(df, logs)
         
-        # ===== 3. REMOVE COMPLETELY EMPTY ROWS =====
-        initial = len(df)
-        df.dropna(how='all', inplace=True)
-        stats["empty_rows_removed"] = initial - len(df)
-        if stats["empty_rows_removed"] > 0:
-            logs.append(f"🗑️ Removed {stats['empty_rows_removed']} empty rows")
+        # === SUMMARY ===
+        total_changes = (
+            stats["duplicates"] + stats["empty_removed"] + 
+            stats["dates_fixed"] + stats["emails_fixed"] + 
+            stats["phones_fixed"] + stats["names_fixed"] + stats["numbers_fixed"]
+        )
         
-        # ===== 4. REMOVE DUPLICATES =====
-        initial = len(df)
-        df.drop_duplicates(inplace=True)
-        stats["duplicates_removed"] = initial - len(df)
-        if stats["duplicates_removed"] > 0:
-            logs.append(f"♻️ Removed {stats['duplicates_removed']} duplicate rows")
+        logs.append(f"")
+        logs.append(f"✅ TRANSFORMATION COMPLETE")
+        logs.append(f"📈 Final: {len(df)} rows × {len(df.columns)} columns")
         
-        # ===== 5. SMART COLUMN PROCESSING =====
-        for col in df.columns:
-            sample = df[col].dropna().head(100)
-            col_lower = col.lower()
-            
-            # Email Detection
-            if 'email' in col_lower or 'mail' in col_lower:
-                df[col] = df[col].apply(validate_email)
-                stats["emails_validated"] += 1
-                logs.append(f"📧 Validated emails in '{col}'")
-            
-            # Phone Detection
-            elif any(x in col_lower for x in ['phone', 'mobile', 'contact', 'cell']):
-                df[col] = df[col].apply(validate_phone)
-                stats["phones_validated"] += 1
-                logs.append(f"📱 Standardized phone numbers in '{col}'")
-            
-            # Date Detection
-            elif any(x in col_lower for x in ['date', 'dob', 'birth', 'created', 'updated', 'joined']):
-                df[col] = detect_and_convert_dates(df[col])
-                stats["dates_standardized"] += 1
-                logs.append(f"📅 Standardized dates in '{col}' to YYYY-MM-DD")
-            
-            # Name Detection (Title Case)
-            elif any(x in col_lower for x in ['name', 'first', 'last', 'middle', 'student', 'teacher']):
-                df[col] = df[col].apply(title_case_name)
-                logs.append(f"👤 Title-cased names in '{col}'")
-            
-            # Numeric Detection (Price, Amount, Fee, etc.)
-            elif any(x in col_lower for x in ['amount', 'price', 'fee', 'salary', 'cost', 'total', 'balance']):
-                df[col] = df[col].apply(clean_numeric)
-                stats["numbers_cleaned"] += 1
-                logs.append(f"💰 Cleaned currency/numbers in '{col}'")
-            
-            # Gender Standardization
-            elif 'gender' in col_lower or 'sex' in col_lower:
-                gender_map = {
-                    'm': 'Male', 'male': 'Male', 'man': 'Male', 'boy': 'Male',
-                    'f': 'Female', 'female': 'Female', 'woman': 'Female', 'girl': 'Female',
-                    'o': 'Other', 'other': 'Other'
-                }
-                df[col] = df[col].astype(str).str.lower().str.strip().map(gender_map).fillna(df[col])
-                logs.append(f"⚧ Standardized gender values in '{col}'")
-            
-            # General Text Cleaning
-            elif df[col].dtype == 'object':
-                df[col] = df[col].apply(standardize_text)
+        if total_changes > 0:
+            logs.append(f"🔥 Total transformations applied: {total_changes}")
         
-        # ===== 6. FILL MISSING VALUES INDICATOR =====
-        # Mark missing values explicitly for tracking
-        df = df.fillna('')
-        
-        # ===== 7. FINAL VALIDATION =====
-        if df.columns.duplicated().any():
-            errors.append("⚠️ Duplicate column names after normalization")
-            return {"success": False, "logs": logs, "errors": errors, "stats": stats}
-        
-        if len(df) == 0:
-            errors.append("⚠️ Dataset empty after cleaning")
-            return {"success": False, "logs": logs, "errors": errors, "stats": stats}
-        
-        stats["final_rows"] = len(df)
-        logs.append(f"✅ Final dataset: {len(df)} rows × {len(df.columns)} columns")
-        
-        # ===== RETURN FILE (DOWNLOAD) =====
+        # === RETURN FILE (for download) ===
         if return_file:
+            csv_content = df.to_csv(index=False)
             return {
                 "success": True,
-                "csv_content": df.to_csv(index=False),
+                "csv_content": csv_content,
                 "logs": logs,
                 "stats": stats
             }
         
-        # ===== 8. DATABASE LOADING =====
-        if not dry_run:
-            logs.append(f"💾 Writing to database table: {table_name}")
+        # === SAVE TO DATABASE ===
+        if not dry_run and db_url:
+            logs.append(f"💾 Saving to database table: {table_name}")
             engine = create_engine(db_url)
             with engine.begin() as conn:
                 df.to_sql(table_name, con=conn, if_exists='replace', index=False)
-            logs.append(f"🎉 Successfully created '{table_name}' with {len(df)} records")
+            logs.append(f"🎉 Created table '{table_name}' with {len(df)} records!")
         
         return {
             "success": True,
@@ -234,13 +270,12 @@ def process_file_and_load(file_obj, filename, table_name, db_url, dry_run=False,
             "errors": [],
             "stats": stats
         }
-
+        
     except Exception as e:
         import traceback
-        logs.append("❌ Critical failure during processing")
+        logs.append(f"❌ Error: {str(e)}")
         return {
             "success": False,
             "logs": logs,
-            "errors": [str(e)],
-            "stats": stats
+            "errors": [str(e), traceback.format_exc()[:500]]
         }
