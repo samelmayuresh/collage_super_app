@@ -1,4 +1,4 @@
-import { PlaceholderPage } from '../../../components/dashboard/PlaceholderPage';
+import { PlaceholderPage } from '../../../../components/dashboard/PlaceholderPage';
 import { Settings } from 'lucide-react';
 
 export default function StudentSettingsPage() {
