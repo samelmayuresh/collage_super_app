@@ -94,13 +94,14 @@ export function StudentNotifications({ userId, userRole }: Props) {
 
 // Static version for server-side rendered dashboards with sample data
 export function StudentNotificationsStatic() {
+    // Use fixed dates to prevent hydration mismatch
     const sampleEvents = [
         {
             id: 1,
             title: 'Annual Sports Day',
             description: 'Join us for the annual sports day celebration with various competitions.',
             event_type: 'sports',
-            start_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            start_date: '2026-01-11T10:00:00.000Z',
             location: 'Main Ground',
             is_mandatory: false
         },
@@ -109,7 +110,7 @@ export function StudentNotificationsStatic() {
             title: 'Technical Workshop',
             description: 'Learn about latest web development technologies and best practices.',
             event_type: 'workshop',
-            start_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+            start_date: '2026-01-07T14:00:00.000Z',
             location: 'Lab 101',
             is_mandatory: true
         }
@@ -122,7 +123,7 @@ export function StudentNotificationsStatic() {
             content: 'The final examination schedule has been released. Check your student portal for details.',
             priority: 'high',
             is_pinned: true,
-            created_at: new Date().toISOString()
+            created_at: '2026-01-04T09:00:00.000Z'
         },
         {
             id: 2,
@@ -130,7 +131,7 @@ export function StudentNotificationsStatic() {
             content: 'Library will remain open until 10 PM during exam week.',
             priority: 'normal',
             is_pinned: false,
-            created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+            created_at: '2026-01-03T09:00:00.000Z'
         }
     ];
 
