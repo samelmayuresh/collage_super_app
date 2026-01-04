@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, Users, BookOpen, FileText, LogOut, Menu, X, History, User, Calendar, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, FileText, LogOut, Menu, X, History, User, Calendar, BarChart3, Database } from 'lucide-react';
 import { logout } from '../../actions/auth';
 import { UserCard } from './UserCard';
 
@@ -75,6 +75,10 @@ export function TeachingSidebar() {
                         <BarChart3 size={20} />
                         <span>Analytics</span>
                     </Link>
+                    <Link href="/dashboard/teaching/data" onClick={() => setIsOpen(false)} className={linkClass}>
+                        <Database size={20} />
+                        <span>Data Engine</span>
+                    </Link>
                     <Link href="/dashboard/teaching/profile" onClick={() => setIsOpen(false)} className={linkClass}>
                         <User size={20} />
                         <span>Profile</span>
@@ -131,6 +135,10 @@ export function TeachingSidebar() {
                     <Link href="/dashboard/teaching/analytics" className={linkClass}>
                         <BarChart3 size={20} />
                         <span>Analytics</span>
+                    </Link>
+                    <Link href="/dashboard/teaching/data" className={linkClass}>
+                        <Database size={20} />
+                        <span>Data Engine</span>
                     </Link>
                 </nav>
 

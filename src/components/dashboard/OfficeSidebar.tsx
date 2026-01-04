@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, FileText, Settings, LogOut, Menu, X, User } from 'lucide-react';
+import { LayoutDashboard, FileText, Settings, LogOut, Menu, X, User, Database } from 'lucide-react';
 import { logout } from '../../actions/auth';
 import { UserCard } from './UserCard';
 
@@ -55,6 +55,10 @@ export function OfficeSidebar() {
                         <FileText size={20} />
                         <span>New Enrollments</span>
                     </Link>
+                    <Link href="/dashboard/office/data" onClick={() => setIsOpen(false)} className={linkClass}>
+                        <Database size={20} />
+                        <span>Data Engine</span>
+                    </Link>
                     <Link href="/dashboard/office/settings" onClick={() => setIsOpen(false)} className={linkClass}>
                         <Settings size={20} />
                         <span>Settings</span>
@@ -98,6 +102,10 @@ export function OfficeSidebar() {
                     <Link href="/dashboard/office/applications" className={linkClass}>
                         <FileText size={20} />
                         <span>New Enrollments</span>
+                    </Link>
+                    <Link href="/dashboard/office/data" className={linkClass}>
+                        <Database size={20} />
+                        <span>Data Engine</span>
                     </Link>
                     <Link href="/dashboard/office/settings" className={linkClass}>
                         <Settings size={20} />
