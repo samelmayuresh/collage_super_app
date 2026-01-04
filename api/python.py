@@ -34,7 +34,9 @@ def health():
 async def upload_file(
     file: UploadFile = File(...), 
     table_name: str = Form(...),
-    schema: str = Form(None)
+    schema: str = Form(None),
+    user_id: str = Form(None),
+    user_name: str = Form(None)
 ):
     try:
         content = await file.read()
@@ -54,6 +56,47 @@ async def upload_file(
         
         if os.path.exists(temp_path):
             os.remove(temp_path)
+        
+        # Record table metadata (creator info)
+        if result.get("success") and user_id:
+            try:
+                from sqlalchemy import create_engine, text
+                from datetime import datetime
+                engine = create_engine(DB_URL)
+                with engine.begin() as conn:
+                    # Create metadata table if not exists
+                    conn.execute(text("""
+                        CREATE TABLE IF NOT EXISTS _table_metadata (
+                            id SERIAL PRIMARY KEY,
+                            table_name VARCHAR(255) UNIQUE NOT NULL,
+                            created_by_id VARCHAR(255),
+                            created_by_name VARCHAR(255),
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            row_count INTEGER,
+                            file_name VARCHAR(255)
+                        )
+                    """))
+                    # Insert or update metadata
+                    conn.execute(text("""
+                        INSERT INTO _table_metadata (table_name, created_by_id, created_by_name, row_count, file_name, created_at)
+                        VALUES (:table_name, :user_id, :user_name, :row_count, :file_name, :created_at)
+                        ON CONFLICT (table_name) DO UPDATE SET
+                            created_by_id = :user_id,
+                            created_by_name = :user_name,
+                            row_count = :row_count,
+                            file_name = :file_name,
+                            created_at = :created_at
+                    """), {
+                        "table_name": table,
+                        "user_id": user_id,
+                        "user_name": user_name or "Unknown",
+                        "row_count": result.get("rowCount", 0),
+                        "file_name": file.filename,
+                        "created_at": datetime.now()
+                    })
+                result["createdBy"] = user_name or user_id
+            except Exception as meta_err:
+                result["metaWarning"] = str(meta_err)
         
         return result
         
@@ -99,19 +142,41 @@ from sqlalchemy import create_engine, text
 
 @app.get("/api/python/tables")
 def list_tables():
-    """List all user-created tables in the database"""
+    """List all user-created tables with creator info"""
     try:
         engine = create_engine(DB_URL)
         with engine.connect() as conn:
+            # Get all tables
             result = conn.execute(text("""
-                SELECT table_name 
-                FROM information_schema.tables 
-                WHERE table_schema = 'public' 
-                AND table_type = 'BASE TABLE'
-                ORDER BY table_name
+                SELECT t.table_name 
+                FROM information_schema.tables t
+                WHERE t.table_schema = 'public' 
+                AND t.table_type = 'BASE TABLE'
+                AND t.table_name != '_table_metadata'
+                ORDER BY t.table_name
             """))
-            tables = [row[0] for row in result]
-        return {"success": True, "tables": tables}
+            table_names = [row[0] for row in result]
+            
+            # Get metadata for tables
+            tables_with_meta = []
+            for tbl in table_names:
+                meta = {"name": tbl, "createdBy": None, "createdAt": None, "rowCount": None}
+                try:
+                    meta_result = conn.execute(text("""
+                        SELECT created_by_name, created_at, row_count, file_name
+                        FROM _table_metadata WHERE table_name = :name
+                    """), {"name": tbl})
+                    row = meta_result.fetchone()
+                    if row:
+                        meta["createdBy"] = row[0]
+                        meta["createdAt"] = row[1].isoformat() if row[1] else None
+                        meta["rowCount"] = row[2]
+                        meta["fileName"] = row[3]
+                except:
+                    pass
+                tables_with_meta.append(meta)
+                
+        return {"success": True, "tables": tables_with_meta}
     except Exception as e:
         return {"success": False, "error": str(e), "tables": []}
 

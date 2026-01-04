@@ -27,7 +27,7 @@ export default function DataImporter() {
     const [schema, setSchema] = useState<SchemaField[]>([]);
     const [detectedColumns, setDetectedColumns] = useState<string[]>([]);
 
-    const [tables, setTables] = useState<string[]>([]);
+    const [tables, setTables] = useState<any[]>([]);
     const [selectedTable, setSelectedTable] = useState('');
     const [tableData, setTableData] = useState<any>(null);
     const [loadingTables, setLoadingTables] = useState(false);
@@ -47,7 +47,8 @@ export default function DataImporter() {
         setLoadingTables(false);
     };
 
-    const fetchTableData = async (name: string) => {
+    const fetchTableData = async (tbl: any) => {
+        const name = typeof tbl === 'string' ? tbl : tbl.name;
         setSelectedTable(name);
         setLoadingTables(true);
         try {
@@ -307,10 +308,28 @@ export default function DataImporter() {
                     {tables.length === 0 ? (
                         <p className="text-gray-500 text-center py-8">No tables. Import data first.</p>
                     ) : (
-                        <div className="grid grid-cols-4 gap-3">
-                            {tables.map(t => (
-                                <button key={t} onClick={() => fetchTableData(t)} className={`p-4 rounded-xl border-2 text-left ${selectedTable === t ? 'border-black bg-gray-50' : 'border-gray-200 hover:border-gray-400'}`}>
-                                    <Table size={20} className="text-gray-400 mb-2" /><span className="font-mono text-sm">{t}</span>
+                        <div className="grid grid-cols-3 gap-4">
+                            {tables.map((t: any) => (
+                                <button
+                                    key={t.name || t}
+                                    onClick={() => fetchTableData(t)}
+                                    className={`p-4 rounded-xl border-2 text-left transition-all hover:shadow-md ${selectedTable === (t.name || t) ? 'border-black bg-gray-50' : 'border-gray-200 hover:border-gray-400'}`}
+                                >
+                                    <div className="flex items-start justify-between">
+                                        <Table size={20} className="text-gray-400" />
+                                        {t.rowCount && <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full text-gray-500">{t.rowCount} rows</span>}
+                                    </div>
+                                    <div className="font-mono text-sm font-semibold mt-2">{t.name || t}</div>
+                                    {t.createdBy && (
+                                        <div className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                                            👤 {t.createdBy}
+                                        </div>
+                                    )}
+                                    {t.createdAt && (
+                                        <div className="text-xs text-gray-400">
+                                            📅 {new Date(t.createdAt).toLocaleDateString()}
+                                        </div>
+                                    )}
                                 </button>
                             ))}
                         </div>
