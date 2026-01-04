@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS admission_applications (
     preferred_course VARCHAR(100),
     
     -- Application Status
-    status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+    status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'ADMITTED')),
     remarks TEXT,
     
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
