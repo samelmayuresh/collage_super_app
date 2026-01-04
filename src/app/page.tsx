@@ -70,8 +70,8 @@ export default async function Home() {
             <div className="w-full h-80 relative">
               {/* Megaphone/Speaker illustration */}
               <div className="absolute right-0 top-1/2 -translate-y-1/2">
-                <div className="w-48 h-48 bg-[#B9FF66] rounded-full flex items-center justify-center transform rotate-12">
-                  <GraduationCap size={80} className="text-black" />
+                <div className="w-48 h-48 bg-white rounded-full flex items-center justify-center transform rotate-12 shadow-2xl border-4 border-[#B9FF66] overflow-hidden">
+                  <img src="/logo.png" alt="College Logo" className="w-32 h-32 object-contain" />
                 </div>
                 {/* Floating icons */}
                 <div className="absolute -top-4 right-0 w-10 h-10 bg-[#B9FF66] rounded-full flex items-center justify-center">
