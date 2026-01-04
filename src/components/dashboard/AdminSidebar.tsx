@@ -50,10 +50,6 @@ export function AdminSidebar() {
                         <Book size={20} />
                         <span>Assignments</span>
                     </Link>
-                    <Link href="/dashboard/admin/branches" onClick={() => setIsOpen(false)} className={linkClass}>
-                        <GitBranch size={20} />
-                        <span>Branches</span>
-                    </Link>
                     <Link href="/dashboard/admin/students" onClick={() => setIsOpen(false)} className={linkClass}>
                         <Users size={20} />
                         <span>Students</span>
@@ -96,10 +92,6 @@ export function AdminSidebar() {
                     <Link href="/dashboard/admin/subjects" className={linkClass}>
                         <BookOpen size={20} />
                         <span>Subjects</span>
-                    </Link>
-                    <Link href="/dashboard/admin/branches" className={linkClass}>
-                        <GitBranch size={20} />
-                        <span>Branches</span>
                     </Link>
                     <Link href="/dashboard/admin/students" className={linkClass}>
                         <Users size={20} />

@@ -20,6 +20,20 @@ const COURSES = [
     'Arts (BA)'
 ];
 
+// List of available branches
+const BRANCHES = [
+    { id: 'FY', name: 'First Year (FY)' },
+    { id: 'SY', name: 'Second Year (SY)' },
+    { id: 'TY', name: 'Third Year (TY)' },
+    { id: 'BE', name: 'Final Year (BE)' },
+    { id: 'CS', name: 'Computer Science' },
+    { id: 'IT', name: 'Information Technology' },
+    { id: 'EXTC', name: 'Electronics & Telecom' },
+    { id: 'MECH', name: 'Mechanical Engineering' },
+    { id: 'CIVIL', name: 'Civil Engineering' },
+    { id: 'AI', name: 'Artificial Intelligence' },
+];
+
 export default function AdmissionRegisterPage() {
     const [error, setError] = useState<string | null>(null);
     const [isPending, startTransition] = useTransition();
@@ -151,12 +165,21 @@ export default function AdmissionRegisterPage() {
                                         <label className="block text-xs font-bold text-[#b07b4b] uppercase tracking-wide mb-1">12th Marks (%)</label>
                                         <input name="twelfthMarks" type="number" step="0.01" max="100" className="w-full bg-[#FDFBF6] border border-[#DAA06D] rounded-xl px-4 py-3 outline-none text-[#5d4037] placeholder-[#DAA06D]/50 focus:ring-2 focus:ring-[#DAA06D]/50 transition-all shadow-sm" />
                                     </div>
-                                    <div className="col-span-1 md:col-span-2">
+                                    <div>
                                         <label className="block text-xs font-bold text-[#b07b4b] uppercase tracking-wide mb-1">Preferred Course</label>
                                         <select name="preferredCourse" required className="w-full bg-[#FDFBF6] border border-[#DAA06D] rounded-xl px-4 py-3 outline-none text-[#5d4037] focus:ring-2 focus:ring-[#DAA06D]/50 transition-all shadow-sm cursor-pointer appearance-none">
                                             <option value="">Select Course</option>
                                             {COURSES.map(course => (
                                                 <option key={course} value={course}>{course}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-[#b07b4b] uppercase tracking-wide mb-1">Branch / Year</label>
+                                        <select name="branch" required className="w-full bg-[#FDFBF6] border border-[#DAA06D] rounded-xl px-4 py-3 outline-none text-[#5d4037] focus:ring-2 focus:ring-[#DAA06D]/50 transition-all shadow-sm cursor-pointer appearance-none">
+                                            <option value="">Select Branch</option>
+                                            {BRANCHES.map(branch => (
+                                                <option key={branch.id} value={branch.id}>{branch.name}</option>
                                             ))}
                                         </select>
                                     </div>
