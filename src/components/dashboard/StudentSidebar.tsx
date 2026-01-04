@@ -69,7 +69,7 @@ export function StudentSidebar() {
                         <span className="font-medium">Calendar</span>
                     </Link>
                     <Link
-                        href="#"
+                        href="/dashboard/student/courses"
                         onClick={() => setIsOpen(false)}
                         className="flex items-center gap-3 p-3 text-gray-600 hover:bg-white rounded-xl transition-colors"
                     >
@@ -77,7 +77,7 @@ export function StudentSidebar() {
                         <span className="font-medium">Courses</span>
                     </Link>
                     <Link
-                        href="#"
+                        href="/dashboard/student/settings"
                         onClick={() => setIsOpen(false)}
                         className="flex items-center gap-3 p-3 text-gray-600 hover:bg-white rounded-xl transition-colors"
                     >
@@ -132,11 +132,11 @@ export function StudentSidebar() {
                         <Calendar size={20} />
                         <span className="font-medium">Calendar</span>
                     </Link>
-                    <Link href="#" className="flex items-center gap-3 p-3 text-gray-600 hover:bg-white rounded-xl transition-colors">
+                    <Link href="/dashboard/student/courses" className="flex items-center gap-3 p-3 text-gray-600 hover:bg-white rounded-xl transition-colors">
                         <Book size={20} />
                         <span className="font-medium">Courses</span>
                     </Link>
-                    <Link href="#" className="flex items-center gap-3 p-3 text-gray-600 hover:bg-white rounded-xl transition-colors">
+                    <Link href="/dashboard/student/settings" className="flex items-center gap-3 p-3 text-gray-600 hover:bg-white rounded-xl transition-colors">
                         <Settings size={20} />
                         <span className="font-medium">Settings</span>
                     </Link>
