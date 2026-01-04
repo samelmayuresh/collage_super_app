@@ -62,12 +62,6 @@ export default async function Home() {
               >
                 Apply Now
               </Link>
-              <Link
-                href="/signin"
-                className="inline-block px-6 py-3 bg-white border-2 border-black text-black rounded-xl font-medium hover:bg-gray-50 transition-colors"
-              >
-                Student Login
-              </Link>
             </div>
           </div>
 
