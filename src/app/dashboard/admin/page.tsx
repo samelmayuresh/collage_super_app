@@ -1,6 +1,7 @@
 import { getSession } from '../../../actions/auth';
 import { Users, BookOpen, FileText, TrendingUp } from 'lucide-react';
 import { AdminAnalytics } from '../../../components/dashboard/AdminAnalytics';
+import { EventsManagementPanel } from '../../../components/dashboard/EventsManager';
 
 export default async function AdminDashboard() {
     const session = await getSession();
@@ -19,6 +20,9 @@ export default async function AdminDashboard() {
                     {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                 </div>
             </div>
+
+            {/* Management Panel */}
+            <EventsManagementPanel userId={parseInt(session.userId)} />
 
             {/* Stats Grid */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
