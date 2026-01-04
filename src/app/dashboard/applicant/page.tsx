@@ -85,6 +85,41 @@ export default function ApplicantDashboard() {
                         <p>{application.remarks}</p>
                     </div>
                 )}
+
+                {/* Payment / Admission Actions */}
+                {application.status === 'APPROVED' && application.payment_status !== 'PAID' && (
+                    <div className="mt-6 pt-6 border-t border-green-200">
+                        <div className="flex items-center justify-between flex-wrap gap-4">
+                            <div>
+                                <h3 className="font-bold text-green-800">Application Approved!</h3>
+                                <p className="text-sm text-green-700">Please pay the admission fees to confirm your seat.</p>
+                            </div>
+                            <a
+                                href="/dashboard/applicant/payment"
+                                className="px-6 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors shadow-lg shadow-green-200 flex items-center gap-2"
+                            >
+                                Pay Admission Fees
+                            </a>
+                        </div>
+                    </div>
+                )}
+
+                {application.status === 'ADMITTED' && (
+                    <div className="mt-6 pt-6 border-t border-green-200">
+                        <div className="flex items-center justify-between flex-wrap gap-4">
+                            <div>
+                                <h3 className="font-bold text-green-800">Admission Confirmed</h3>
+                                <p className="text-sm text-green-700">Explore your student dashboard.</p>
+                            </div>
+                            <a
+                                href="/dashboard/student"
+                                className="px-6 py-3 bg-black text-white rounded-xl font-bold hover:bg-gray-800 transition-colors shadow-lg shadow-gray-200 flex items-center gap-2"
+                            >
+                                Go to Student Dashboard
+                            </a>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Details Card */}

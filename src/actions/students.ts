@@ -49,17 +49,28 @@ export async function getAllStudents() {
         const enrollmentResult = await appDb.query(enrollmentQuery, [studentIds]);
         const enrollments = enrollmentResult.rows;
 
-        // 3. Merge data
+        // 3. Fetch academic info (Branch/Year) from admission_applications
+        // NEW: Fetch admission info for branch/year
+        const admissionQuery = `
+            SELECT applicant_id, branch, admission_category
+            FROM admission_applications
+            WHERE applicant_id = ANY($1)
+        `;
+        const admissionResult = await appDb.query(admissionQuery, [studentIds]);
+        const admissions = admissionResult.rows;
+
+        // 4. Merge data
         const mergedStudents = students.map(student => {
-            // A student might be in multiple classrooms? 
-            // For listing, we might just pick the first one or concat.
-            // Let's pick the first one found for now.
             const enrollment = enrollments.find(e => e.student_id === student.id);
+            const admission = admissions.find(a => a.applicant_id === student.id);
+
             return {
                 ...student,
                 classroom_id: enrollment ? enrollment.classroom_id : null,
                 room_number: enrollment ? enrollment.room_number : null,
                 building_name: enrollment ? enrollment.building_name : null,
+                branch: admission ? admission.branch : null,
+                admission_category: admission ? admission.admission_category : null,
                 // Legacy fields nullified
                 roll_number: null,
                 class_name: enrollment ? `${enrollment.building_name} - ${enrollment.room_number}` : null,

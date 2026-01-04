@@ -16,6 +16,8 @@ interface Student {
     room_number?: string | null;
     building_name?: string | null;
     class_name?: string | null;
+    branch?: string | null;
+    admission_category?: string | null;
     created_at: string;
 }
 
@@ -32,6 +34,8 @@ export default function StudentsPage() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterClassroom, setFilterClassroom] = useState<string>('');
+    const [filterBranch, setFilterBranch] = useState<string>('');
+    const [filterYear, setFilterYear] = useState<string>('');
 
     // Class Assignment State
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -144,8 +148,6 @@ export default function StudentsPage() {
 
     function openAssignModal(student: Student) {
         setSelectedStudent(student);
-        // We don't pre-fill cascading selectors (complex logic to reverse map room->floor->building)
-        // It's cleaner to ask them to select fresh.
         setAssignClassroomId('');
         setAssignModalOpen(true);
     }
@@ -164,7 +166,15 @@ export default function StudentsPage() {
             ? student.classroom_id?.toString() === filterClassroom
             : true;
 
-        return matchesSearch && matchesClassroom;
+        const matchesBranch = filterBranch
+            ? student.branch === filterBranch
+            : true;
+
+        const matchesYear = filterYear
+            ? student.admission_category === filterYear
+            : true;
+
+        return matchesSearch && matchesClassroom && matchesBranch && matchesYear;
     });
 
     function toggleSelectAll() {
@@ -183,15 +193,23 @@ export default function StudentsPage() {
         }
     }
 
-    if (loading) {
-        return (
-            <div className="flex-1 flex items-center justify-center h-96">
-                <Loader2 size={32} className="animate-spin text-indigo-600" />
-            </div>
-        );
-    }
-
     const isAllSelected = filteredStudents.length > 0 && selectedIds.length === filteredStudents.length;
+
+    // Filter Options
+    const ADMISSION_TYPES = [
+        { id: 'FY', name: 'First Year (FY)' },
+        { id: 'DSY', name: 'Direct Second Year (DSY)' }
+        // Future: SY, TY, BE can be added here or logic derived
+    ];
+
+    const BRANCH_OPTIONS = [
+        { id: 'CS', name: 'Computer Science' },
+        { id: 'IT', name: 'Information Technology' },
+        { id: 'EXTC', name: 'Electronics & Telecom' },
+        { id: 'MECH', name: 'Mechanical Engineering' },
+        { id: 'CIVIL', name: 'Civil Engineering' },
+        { id: 'AI', name: 'Artificial Intelligence' },
+    ];
 
     return (
         <div className="flex-1 p-4 sm:p-8 bg-[#F5F7FA] relative">
@@ -211,8 +229,8 @@ export default function StudentsPage() {
                 </div>
 
                 {/* Filters */}
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 flex flex-col sm:flex-row gap-4">
-                    <div className="flex-1 relative">
+                <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 flex flex-col xl:flex-row gap-4">
+                    <div className="flex-1 relative min-w-[200px]">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                         <input
                             type="text"
@@ -222,24 +240,57 @@ export default function StudentsPage() {
                             className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500"
                         />
                     </div>
-                    <div className="w-full sm:w-64">
-                        <select
-                            value={filterClassroom}
-                            onChange={(e) => setFilterClassroom(e.target.value)}
-                            className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500 bg-white"
-                        >
-                            <option value="">All Classrooms</option>
-                            {classrooms.map(c => (
-                                <option key={c.id} value={c.id}>
-                                    {c.building_name} - {c.room_number} (F{c.floor_number})
-                                </option>
-                            ))}
-                        </select>
+
+                    <div className="flex gap-4 sm:w-auto w-full flex-col sm:flex-row flex-wrap">
+                        <div className="w-full sm:w-48">
+                            <select
+                                value={filterYear}
+                                onChange={(e) => setFilterYear(e.target.value)}
+                                className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500 bg-white"
+                            >
+                                <option value="">All Years</option>
+                                {ADMISSION_TYPES.map(t => (
+                                    <option key={t.id} value={t.id}>
+                                        {t.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="w-full sm:w-48">
+                            <select
+                                value={filterBranch}
+                                onChange={(e) => setFilterBranch(e.target.value)}
+                                className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500 bg-white"
+                            >
+                                <option value="">All Branches</option>
+                                {BRANCH_OPTIONS.map(b => (
+                                    <option key={b.id} value={b.id}>
+                                        {b.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="w-full sm:w-64">
+                            <select
+                                value={filterClassroom}
+                                onChange={(e) => setFilterClassroom(e.target.value)}
+                                className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500 bg-white"
+                            >
+                                <option value="">All Classrooms</option>
+                                {classrooms.map(c => (
+                                    <option key={c.id} value={c.id}>
+                                        {c.building_name} - {c.room_number} (F{c.floor_number})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
                 </div>
 
                 {/* Students List */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                < div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden" >
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -326,126 +377,130 @@ export default function StudentsPage() {
                             </tbody>
                         </table>
                     </div>
-                </div>
+                </div >
 
                 {/* Bulk Selection Floating Bar */}
-                {selectedIds.length > 0 && (
-                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white px-6 py-3 rounded-2xl shadow-xl border border-gray-200 flex items-center gap-6 z-40 animate-in slide-in-from-bottom-5">
-                        <div className="flex items-center gap-2">
-                            <div className="bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">
-                                {selectedIds.length}
+                {
+                    selectedIds.length > 0 && (
+                        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white px-6 py-3 rounded-2xl shadow-xl border border-gray-200 flex items-center gap-6 z-40 animate-in slide-in-from-bottom-5">
+                            <div className="flex items-center gap-2">
+                                <div className="bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">
+                                    {selectedIds.length}
+                                </div>
+                                <span className="font-semibold text-slate-800">Students Selected</span>
                             </div>
-                            <span className="font-semibold text-slate-800">Students Selected</span>
+                            <div className="h-6 w-px bg-gray-200"></div>
+                            <button
+                                onClick={openBulkAssignModal}
+                                className="bg-indigo-600 text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors shadow-sm hover:shadow-md"
+                            >
+                                Assign Classroom
+                            </button>
+                            <button
+                                onClick={() => setSelectedIds([])}
+                                className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-lg transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
                         </div>
-                        <div className="h-6 w-px bg-gray-200"></div>
-                        <button
-                            onClick={openBulkAssignModal}
-                            className="bg-indigo-600 text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors shadow-sm hover:shadow-md"
-                        >
-                            Assign Classroom
-                        </button>
-                        <button
-                            onClick={() => setSelectedIds([])}
-                            className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-lg transition-colors"
-                        >
-                            <X size={20} />
-                        </button>
-                    </div>
-                )}
+                    )
+                }
+
+                {/* Assign Classroom Modal (Shared for Single & Bulk) */}
+                {
+                    assignModalOpen && (
+                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl animate-in fade-in zoom-in duration-200">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h2 className="text-xl font-bold">
+                                        {selectedStudent ? 'Assign Student' : `Assign ${selectedIds.length} Students`}
+                                    </h2>
+                                    <button onClick={() => setAssignModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                                        <X size={24} />
+                                    </button>
+                                </div>
+
+                                <div className="mb-6">
+                                    <p className="text-sm text-gray-500 mb-4">
+                                        {selectedStudent
+                                            ? <span>Assigning <span className="font-bold text-slate-800">{selectedStudent.name}</span> to a classroom.</span>
+                                            : <span>Assigning <span className="font-bold text-slate-800">{selectedIds.length} students</span>. Roll numbers will be automatically generated.</span>
+                                        }
+                                    </p>
+
+                                    <div className="space-y-4">
+                                        {/* Building Select */}
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">Building</label>
+                                            <select
+                                                value={selBuilding}
+                                                onChange={(e) => setSelBuilding(e.target.value)}
+                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500 bg-white"
+                                            >
+                                                <option value="">Select Building...</option>
+                                                {buildings.map(b => (
+                                                    <option key={b.id} value={b.id}>{b.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        {/* Floor Select */}
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">Floor</label>
+                                            <select
+                                                value={selFloor}
+                                                onChange={(e) => setSelFloor(e.target.value)}
+                                                disabled={!selBuilding}
+                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500 bg-white disabled:opacity-50"
+                                            >
+                                                <option value="">Select Floor...</option>
+                                                {floors.map(f => (
+                                                    <option key={f.id} value={f.id}>{f.floor_number}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        {/* Classroom Select */}
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1">Classroom</label>
+                                            <select
+                                                value={assignClassroomId}
+                                                onChange={(e) => setAssignClassroomId(e.target.value)}
+                                                disabled={!selFloor}
+                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500 bg-white disabled:opacity-50"
+                                            >
+                                                <option value="">Select Classroom...</option>
+                                                {roomOptions.map(c => (
+                                                    <option key={c.id} value={c.id}>
+                                                        Room {c.room_number}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end gap-3">
+                                    <button
+                                        onClick={() => setAssignModalOpen(false)}
+                                        className="px-5 py-2.5 text-gray-600 hover:bg-gray-100 rounded-xl font-medium"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleAssignClassroom}
+                                        disabled={assigning || !assignClassroomId}
+                                        className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-indigo-200"
+                                    >
+                                        {assigning && <Loader2 size={16} className="animate-spin" />}
+                                        Save Assignment
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )
+                }
             </div>
-
-            {/* Assign Classroom Modal (Shared for Single & Bulk) */}
-            {assignModalOpen && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl animate-in fade-in zoom-in duration-200">
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-xl font-bold">
-                                {selectedStudent ? 'Assign Student' : `Assign ${selectedIds.length} Students`}
-                            </h2>
-                            <button onClick={() => setAssignModalOpen(false)} className="text-gray-400 hover:text-gray-600">
-                                <X size={24} />
-                            </button>
-                        </div>
-
-                        <div className="mb-6">
-                            <p className="text-sm text-gray-500 mb-4">
-                                {selectedStudent
-                                    ? <span>Assigning <span className="font-bold text-slate-800">{selectedStudent.name}</span> to a classroom.</span>
-                                    : <span>Assigning <span className="font-bold text-slate-800">{selectedIds.length} students</span>. Roll numbers will be automatically generated.</span>
-                                }
-                            </p>
-
-                            <div className="space-y-4">
-                                {/* Building Select */}
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Building</label>
-                                    <select
-                                        value={selBuilding}
-                                        onChange={(e) => setSelBuilding(e.target.value)}
-                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500 bg-white"
-                                    >
-                                        <option value="">Select Building...</option>
-                                        {buildings.map(b => (
-                                            <option key={b.id} value={b.id}>{b.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {/* Floor Select */}
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Floor</label>
-                                    <select
-                                        value={selFloor}
-                                        onChange={(e) => setSelFloor(e.target.value)}
-                                        disabled={!selBuilding}
-                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500 bg-white disabled:opacity-50"
-                                    >
-                                        <option value="">Select Floor...</option>
-                                        {floors.map(f => (
-                                            <option key={f.id} value={f.id}>{f.floor_number}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {/* Classroom Select */}
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Classroom</label>
-                                    <select
-                                        value={assignClassroomId}
-                                        onChange={(e) => setAssignClassroomId(e.target.value)}
-                                        disabled={!selFloor}
-                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500 bg-white disabled:opacity-50"
-                                    >
-                                        <option value="">Select Classroom...</option>
-                                        {roomOptions.map(c => (
-                                            <option key={c.id} value={c.id}>
-                                                Room {c.room_number}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex justify-end gap-3">
-                            <button
-                                onClick={() => setAssignModalOpen(false)}
-                                className="px-5 py-2.5 text-gray-600 hover:bg-gray-100 rounded-xl font-medium"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleAssignClassroom}
-                                disabled={assigning || !assignClassroomId}
-                                className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-indigo-200"
-                            >
-                                {assigning && <Loader2 size={16} className="animate-spin" />}
-                                Save Assignment
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
+        </div >
     );
 }

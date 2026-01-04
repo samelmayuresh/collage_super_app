@@ -13,6 +13,8 @@ interface Student {
     classroom_id?: number;
     room_number?: string;
     building_name?: string;
+    branch?: string | null;
+    admission_category?: string | null;
     // Extra fields for Global view
     role?: string;
 }
@@ -34,6 +36,22 @@ export default function TeacherStudentsPage() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterClassroomId, setFilterClassroomId] = useState<string>('');
+    const [filterYear, setFilterYear] = useState<string>('');
+    const [filterBranch, setFilterBranch] = useState<string>('');
+
+    // Constants
+    const ADMISSION_TYPES = [
+        { id: 'FY', name: 'First Year (FY)' },
+        { id: 'DSY', name: 'Direct Second Year (DSY)' }
+    ];
+    const BRANCH_OPTIONS = [
+        { id: 'CS', name: 'Computer Science' },
+        { id: 'IT', name: 'Information Technology' },
+        { id: 'EXTC', name: 'Electronics & Telecom' },
+        { id: 'MECH', name: 'Mechanical Engineering' },
+        { id: 'CIVIL', name: 'Civil Engineering' },
+        { id: 'AI', name: 'Artificial Intelligence' },
+    ];
 
     // Enroll Modal
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -83,7 +101,15 @@ export default function TeacherStudentsPage() {
                 ? s.classroom_id?.toString() === filterClassroomId
                 : true;
 
-            return matchesSearch && matchesClass;
+            const matchesYear = filterYear
+                ? s.admission_category === filterYear
+                : true;
+
+            const matchesBranch = filterBranch
+                ? s.branch === filterBranch
+                : true;
+
+            return matchesSearch && matchesClass && matchesYear && matchesBranch;
         });
 
     async function handleEnroll() {
@@ -154,23 +180,57 @@ export default function TeacherStudentsPage() {
                             className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500"
                         />
                     </div>
-                    <div className="w-full sm:w-64">
-                        <div className="relative">
-                            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                            <select
-                                value={filterClassroomId}
-                                onChange={(e) => setFilterClassroomId(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500 bg-white appearance-none"
-                            >
-                                <option value="">All My Classrooms</option>
-                                <option value="GLOBAL">Global Directory (Search All)</option>
-                                <hr />
-                                {myClassrooms.map(c => (
-                                    <option key={`${c.classroom_id}-${c.subject_name}`} value={c.classroom_id}>
-                                        {c.building_name} - Room {c.room_number} {c.subject_name ? `(${c.subject_name})` : ''}
-                                    </option>
-                                ))}
-                            </select>
+                    <div className="flex gap-4 sm:w-auto w-full flex-col sm:flex-row flex-wrap">
+                        <div className="w-full sm:w-40">
+                            <div className="relative">
+                                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                <select
+                                    value={filterYear}
+                                    onChange={(e) => setFilterYear(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500 bg-white appearance-none"
+                                >
+                                    <option value="">All Years</option>
+                                    {ADMISSION_TYPES.map(t => (
+                                        <option key={t.id} value={t.id}>{t.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="w-full sm:w-40">
+                            <div className="relative">
+                                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                <select
+                                    value={filterBranch}
+                                    onChange={(e) => setFilterBranch(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500 bg-white appearance-none"
+                                >
+                                    <option value="">All Branches</option>
+                                    {BRANCH_OPTIONS.map(b => (
+                                        <option key={b.id} value={b.id}>{b.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="w-full sm:w-64">
+                            <div className="relative">
+                                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                <select
+                                    value={filterClassroomId}
+                                    onChange={(e) => setFilterClassroomId(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-indigo-500 bg-white appearance-none"
+                                >
+                                    <option value="">All My Classrooms</option>
+                                    <option value="GLOBAL">Global Directory (Search All)</option>
+                                    <hr />
+                                    {myClassrooms.map(c => (
+                                        <option key={`${c.classroom_id}-${c.subject_name}`} value={c.classroom_id}>
+                                            {c.building_name} - Room {c.room_number} {c.subject_name ? `(${c.subject_name})` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </div>

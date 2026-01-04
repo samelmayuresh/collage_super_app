@@ -21,11 +21,13 @@ const COURSES = [
 ];
 
 // List of available branches
-const BRANCHES = [
+const ADMISSION_CATEGORIES = [
     { id: 'FY', name: 'First Year (FY)' },
-    { id: 'SY', name: 'Second Year (SY)' },
-    { id: 'TY', name: 'Third Year (TY)' },
-    { id: 'BE', name: 'Final Year (BE)' },
+    { id: 'DSY', name: 'Direct Second Year (DSY)' }
+];
+
+// List of available branches
+const BRANCHES = [
     { id: 'CS', name: 'Computer Science' },
     { id: 'IT', name: 'Information Technology' },
     { id: 'EXTC', name: 'Electronics & Telecom' },
@@ -175,7 +177,16 @@ export default function AdmissionRegisterPage() {
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-[#b07b4b] uppercase tracking-wide mb-1">Branch / Year</label>
+                                        <label className="block text-xs font-bold text-[#b07b4b] uppercase tracking-wide mb-1">Admission Type</label>
+                                        <select name="admissionCategory" required className="w-full bg-[#FDFBF6] border border-[#DAA06D] rounded-xl px-4 py-3 outline-none text-[#5d4037] focus:ring-2 focus:ring-[#DAA06D]/50 transition-all shadow-sm cursor-pointer appearance-none">
+                                            <option value="">Select Admission Type</option>
+                                            {ADMISSION_CATEGORIES.map(cat => (
+                                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-[#b07b4b] uppercase tracking-wide mb-1">Branch</label>
                                         <select name="branch" required className="w-full bg-[#FDFBF6] border border-[#DAA06D] rounded-xl px-4 py-3 outline-none text-[#5d4037] focus:ring-2 focus:ring-[#DAA06D]/50 transition-all shadow-sm cursor-pointer appearance-none">
                                             <option value="">Select Branch</option>
                                             {BRANCHES.map(branch => (

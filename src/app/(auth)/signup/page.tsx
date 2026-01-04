@@ -98,7 +98,6 @@ export default function SignupPage() {
                     >
                         <option value="STAFF">Staff</option>
                         <option value="TEACHING">Teaching</option>
-                        <option value="STUDENT">Student</option>
                         <option value="OFFICE_STAFF">Office Staff</option>
                     </select>
 

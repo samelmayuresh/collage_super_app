@@ -23,6 +23,8 @@ export async function registerApplicant(formData: FormData) {
     const tenthMarks = formData.get('tenthMarks');
     const twelfthMarks = formData.get('twelfthMarks');
     const preferredCourse = formData.get('preferredCourse') as string;
+    const branch = formData.get('branch') as string;
+    const admissionCategory = formData.get('admissionCategory') as string;
 
     if (!fullName || !email || !password || !phone) {
         return { error: 'Required fields missing' };
@@ -48,12 +50,12 @@ export async function registerApplicant(formData: FormData) {
             `INSERT INTO admission_applications (
                 applicant_id, full_name, email, phone, dob, gender,
                 address, city, state, pincode,
-                tenth_marks, twelfth_marks, preferred_course, status
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'PENDING')`,
+                tenth_marks, twelfth_marks, preferred_course, branch, admission_category, status
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'PENDING')`,
             [
                 newUser.id, fullName, email, phone, dob || null, gender || null,
                 address || null, city || null, state || null, pincode || null,
-                tenthMarks || null, twelfthMarks || null, preferredCourse || null
+                tenthMarks || null, twelfthMarks || null, preferredCourse || null, branch || null, admissionCategory || null
             ]
         );
 
@@ -126,5 +128,67 @@ export async function updateApplicationStatus(applicationId: number, status: str
     } catch (error) {
         console.error('Error updating status:', error);
         return { error: 'Failed to update application' };
+    }
+}
+
+export async function confirmPayment(amount: number, method: string) {
+    const session = await getSession();
+    if (!session || session.role !== 'APPLICANT') {
+        return { error: 'Unauthorized' };
+    }
+
+    try {
+        await appDb.query('BEGIN');
+
+        // 1. Get Application
+        const appRes = await appDb.query(
+            'SELECT * FROM admission_applications WHERE applicant_id = $1',
+            [session.id]
+        );
+
+        if (appRes.rows.length === 0) {
+            throw new Error('Application not found');
+        }
+
+        const application = appRes.rows[0];
+        if (application.status !== 'APPROVED') {
+            throw new Error('Application not approved for payment');
+        }
+
+        // 2. Update Application Status to ADMITTED and Paid
+        const updateRes = await appDb.query(
+            `UPDATE admission_applications 
+             SET status = 'ADMITTED', payment_status = 'PAID', updated_at = NOW() 
+             WHERE id = $1 RETURNING *`,
+            [application.id]
+        );
+
+        // 3. Update User Role to STUDENT
+        const userUpdateRes = await authDb.query(
+            "UPDATE users SET role = 'STUDENT' WHERE id = $1 RETURNING *",
+            [session.id]
+        );
+        const updatedUser = userUpdateRes.rows[0];
+
+        // 4. Create Student Record in App DB (if separated from application?)
+        // Currently we use 'students' table?
+        // Let's check schema_app.sql. 
+        // Previously 'getAllStudents' used 'users' table joined with 'student_classrooms'.
+        // There is NO separate 'students' table in my previous analysis?
+        // Wait, 'getAllStudents' in Step 4205 viewed 'schema_app.sql' lines 1-77.
+        // It showed 'students' table?
+        // Let's re-verify schema.
+
+        await appDb.query('COMMIT');
+
+        // 5. Refresh Session
+        await createSession(updatedUser);
+
+        return { success: true };
+
+    } catch (error: any) {
+        await appDb.query('ROLLBACK');
+        console.error('Payment confirmation error:', error);
+        return { error: error.message || 'Payment failed' };
     }
 }

@@ -340,9 +340,20 @@ export async function getMyStudents() {
         const userMap = new Map();
         usersResult.rows.forEach((u: any) => userMap.set(u.id, u));
 
-        // 3. Merge data
+        // 3. Fetch admission info (Branch/Year)
+        const admissionResult = await appDb.query(
+            `SELECT applicant_id, branch, admission_category
+             FROM admission_applications
+             WHERE applicant_id = ANY($1)`,
+            [studentIds]
+        );
+        const admissions = admissionResult.rows;
+
+        // 4. Merge data
         const students = enrollments.map((e: any) => {
             const user = userMap.get(e.student_id);
+            const admission = admissions.find((a: any) => a.applicant_id === e.student_id);
+
             return {
                 id: e.student_id,
                 name: user?.name || 'Unknown',
@@ -351,7 +362,9 @@ export async function getMyStudents() {
                 room_number: e.room_number,
                 building_name: e.building_name,
                 subject_name: e.subject_name,
-                roll_number: e.roll_number
+                roll_number: e.roll_number,
+                branch: admission?.branch || null,
+                admission_category: admission?.admission_category || null
             };
         });
 
