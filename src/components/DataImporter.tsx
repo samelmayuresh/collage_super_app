@@ -2,22 +2,54 @@
 
 import React, { useState } from 'react';
 import styles from './DataImporter.module.css';
-import { Loader2, CheckCircle, AlertCircle, Terminal, Download, Sparkles, Trash2, Calendar, Mail, Phone, Hash } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, Terminal, Download, Sparkles, Plus, Trash2, Settings2 } from 'lucide-react';
+
+interface SchemaField {
+    name: string;
+    type: 'text' | 'number' | 'date' | 'email' | 'phone' | 'boolean';
+    required: boolean;
+    mapFrom?: string;
+}
 
 export default function DataImporter() {
     const [file, setFile] = useState<File | null>(null);
     const [tableName, setTableName] = useState('');
     const [isUploading, setIsUploading] = useState(false);
     const [result, setResult] = useState<any>(null);
+    const [showSchema, setShowSchema] = useState(false);
+    const [schema, setSchema] = useState<SchemaField[]>([]);
+    const [detectedColumns, setDetectedColumns] = useState<string[]>([]);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const selectedFile = e.target.files[0];
             setFile(selectedFile);
             const suggestedName = selectedFile.name.split('.')[0].replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
             setTableName(suggestedName);
             setResult(null);
+
+            // Detect columns from CSV header
+            if (selectedFile.name.endsWith('.csv')) {
+                const text = await selectedFile.slice(0, 2000).text();
+                const firstLine = text.split('\n')[0];
+                const cols = firstLine.split(',').map(c => c.trim().replace(/"/g, ''));
+                setDetectedColumns(cols);
+            }
         }
+    };
+
+    const addSchemaField = () => {
+        setSchema([...schema, { name: '', type: 'text', required: false }]);
+    };
+
+    const removeSchemaField = (index: number) => {
+        setSchema(schema.filter((_, i) => i !== index));
+    };
+
+    const updateSchemaField = (index: number, field: Partial<SchemaField>) => {
+        const newSchema = [...schema];
+        newSchema[index] = { ...newSchema[index], ...field };
+        setSchema(newSchema);
     };
 
     const handleDownload = async () => {
@@ -27,6 +59,9 @@ export default function DataImporter() {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('table_name', 'export');
+        if (schema.length > 0) {
+            formData.append('schema', JSON.stringify(schema));
+        }
 
         try {
             const response = await fetch('/api/python/download', {
@@ -60,6 +95,9 @@ export default function DataImporter() {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('table_name', tableName);
+        if (schema.length > 0) {
+            formData.append('schema', JSON.stringify(schema));
+        }
 
         try {
             const response = await fetch('/api/python/upload', {
@@ -84,17 +122,8 @@ export default function DataImporter() {
         }
     };
 
-    const StatBadge = ({ icon: Icon, label, value, color }: any) => (
-        value > 0 && (
-            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${color} text-white text-xs font-medium`}>
-                <Icon size={14} />
-                <span>{value} {label}</span>
-            </div>
-        )
-    );
-
     return (
-        <div className="w-full max-w-4xl mx-auto p-6 space-y-8">
+        <div className="w-full max-w-5xl mx-auto p-6 space-y-6">
 
             {/* 3D Folder Upload UI */}
             <div className={styles.importerWrapper}>
@@ -116,10 +145,89 @@ export default function DataImporter() {
             {/* Control Panel */}
             {file && (
                 <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 space-y-4">
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <Sparkles size={16} className="text-yellow-500" />
-                        <span>Flagship Engine will auto-detect & transform: Dates, Emails, Phones, Names, Currency</span>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <Sparkles size={16} className="text-yellow-500" />
+                            <span>📁 {file.name} ({(file.size / 1024).toFixed(1)} KB)</span>
+                        </div>
+                        <button
+                            onClick={() => setShowSchema(!showSchema)}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${showSchema ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                        >
+                            <Settings2 size={16} />
+                            {showSchema ? 'Hide Schema' : 'Define Schema'}
+                        </button>
                     </div>
+
+                    {/* Schema Builder */}
+                    {showSchema && (
+                        <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-5 rounded-xl border border-purple-100 space-y-4">
+                            <div className="flex items-center justify-between">
+                                <h3 className="font-semibold text-purple-900">🎯 Target Schema</h3>
+                                <button
+                                    onClick={addSchemaField}
+                                    className="flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700"
+                                >
+                                    <Plus size={14} /> Add Column
+                                </button>
+                            </div>
+
+                            {schema.length === 0 && (
+                                <p className="text-sm text-purple-600 italic">Define columns to enforce a specific structure. Leave empty for auto-detection.</p>
+                            )}
+
+                            {schema.map((field, index) => (
+                                <div key={index} className="flex gap-3 items-center bg-white p-3 rounded-lg shadow-sm">
+                                    <input
+                                        type="text"
+                                        placeholder="Column name"
+                                        value={field.name}
+                                        onChange={(e) => updateSchemaField(index, { name: e.target.value })}
+                                        className="flex-1 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-300"
+                                    />
+                                    <select
+                                        value={field.type}
+                                        onChange={(e) => updateSchemaField(index, { type: e.target.value as any })}
+                                        className="px-3 py-2 border rounded-lg text-sm bg-white"
+                                    >
+                                        <option value="text">Text</option>
+                                        <option value="number">Number</option>
+                                        <option value="date">Date</option>
+                                        <option value="email">Email</option>
+                                        <option value="phone">Phone</option>
+                                        <option value="boolean">Yes/No</option>
+                                    </select>
+                                    {detectedColumns.length > 0 && (
+                                        <select
+                                            value={field.mapFrom || ''}
+                                            onChange={(e) => updateSchemaField(index, { mapFrom: e.target.value })}
+                                            className="px-3 py-2 border rounded-lg text-sm bg-white"
+                                        >
+                                            <option value="">Map from...</option>
+                                            {detectedColumns.map(col => (
+                                                <option key={col} value={col}>{col}</option>
+                                            ))}
+                                        </select>
+                                    )}
+                                    <label className="flex items-center gap-1 text-sm">
+                                        <input
+                                            type="checkbox"
+                                            checked={field.required}
+                                            onChange={(e) => updateSchemaField(index, { required: e.target.checked })}
+                                        />
+                                        Required
+                                    </label>
+                                    <button
+                                        onClick={() => removeSchemaField(index)}
+                                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
                     <div className="flex flex-col md:flex-row gap-4 items-end">
                         <div className="flex-1 space-y-2 w-full">
@@ -132,28 +240,23 @@ export default function DataImporter() {
                                 placeholder="e.g. students_2024"
                             />
                         </div>
-                        <div className="flex-1 w-full space-y-3">
-                            <div className="text-sm text-gray-600 font-medium">
-                                📁 {file.name} <span className="text-gray-400">({(file.size / 1024).toFixed(1)} KB)</span>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                                <button
-                                    onClick={handleUpload}
-                                    disabled={isUploading}
-                                    className="bg-gradient-to-r from-black to-gray-800 text-white px-4 py-3 rounded-xl font-semibold hover:from-gray-800 hover:to-black disabled:opacity-50 flex items-center justify-center gap-2 transition-all shadow-lg"
-                                >
-                                    {isUploading ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
-                                    Transform & Load
-                                </button>
-                                <button
-                                    onClick={handleDownload}
-                                    disabled={isUploading}
-                                    className="bg-white text-black border-2 border-black px-4 py-3 rounded-xl font-semibold hover:bg-gray-50 disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
-                                >
-                                    <Download size={18} />
-                                    Download Clean
-                                </button>
-                            </div>
+                        <div className="flex-1 w-full grid grid-cols-2 gap-2">
+                            <button
+                                onClick={handleUpload}
+                                disabled={isUploading}
+                                className="bg-gradient-to-r from-black to-gray-800 text-white px-4 py-3 rounded-xl font-semibold hover:from-gray-800 hover:to-black disabled:opacity-50 flex items-center justify-center gap-2 transition-all shadow-lg"
+                            >
+                                {isUploading ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
+                                Transform & Load
+                            </button>
+                            <button
+                                onClick={handleDownload}
+                                disabled={isUploading}
+                                className="bg-white text-black border-2 border-black px-4 py-3 rounded-xl font-semibold hover:bg-gray-50 disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
+                            >
+                                <Download size={18} />
+                                Download Clean
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -177,18 +280,6 @@ export default function DataImporter() {
                                     </p>
                                 )}
                             </div>
-
-                            {/* Stats Grid */}
-                            {result.stats && (
-                                <div className="flex flex-wrap gap-2">
-                                    <StatBadge icon={Trash2} label="duplicates removed" value={result.stats.duplicates_removed} color="bg-purple-500" />
-                                    <StatBadge icon={Trash2} label="empty rows removed" value={result.stats.empty_rows_removed} color="bg-gray-500" />
-                                    <StatBadge icon={Calendar} label="dates standardized" value={result.stats.dates_standardized} color="bg-blue-500" />
-                                    <StatBadge icon={Mail} label="emails validated" value={result.stats.emails_validated} color="bg-orange-500" />
-                                    <StatBadge icon={Phone} label="phones cleaned" value={result.stats.phones_validated} color="bg-teal-500" />
-                                    <StatBadge icon={Hash} label="numbers cleaned" value={result.stats.numbers_cleaned} color="bg-indigo-500" />
-                                </div>
-                            )}
 
                             {/* Console Logs */}
                             <div className="bg-slate-900 rounded-xl overflow-hidden shadow-xl">

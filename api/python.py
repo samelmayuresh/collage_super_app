@@ -31,22 +31,27 @@ def health():
     return {"status": "Flagship Engine Ready"}
 
 @app.post("/api/python/upload")
-async def upload_file(file: UploadFile = File(...), table_name: str = Form(...)):
+async def upload_file(
+    file: UploadFile = File(...), 
+    table_name: str = Form(...),
+    schema: str = Form(None)
+):
     try:
-        # Read file content
         content = await file.read()
-        
-        # Save to temp file
         temp_path = f"temp_{file.filename}"
         with open(temp_path, "wb") as f:
             f.write(content)
         
-        # Process
+        # Parse schema if provided
+        schema_obj = None
+        if schema:
+            import json
+            schema_obj = json.loads(schema)
+        
         with open(temp_path, "rb") as f:
             table = sanitize_column_name(table_name) or "imported_data"
-            result = process_file_and_load(f, file.filename, table, DB_URL)
+            result = process_file_and_load(f, file.filename, table, DB_URL, schema=schema_obj)
         
-        # Cleanup
         if os.path.exists(temp_path):
             os.remove(temp_path)
         

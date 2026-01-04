@@ -222,8 +222,8 @@ def magic_transform(df, logs):
     changes["rows_after"] = len(df)
     return df, changes
 
-def process_file_and_load(file_obj, filename, table_name, db_url, dry_run=False, return_file=False):
-    """Main processing function"""
+def process_file_and_load(file_obj, filename, table_name, db_url, dry_run=False, return_file=False, schema=None):
+    """Main processing function with optional schema enforcement"""
     logs = []
     
     try:
@@ -239,6 +239,60 @@ def process_file_and_load(file_obj, filename, table_name, db_url, dry_run=False,
             return {"success": False, "errors": ["Unsupported file format"], "logs": logs}
         
         logs.append(f"📊 Loaded {len(df)} rows × {len(df.columns)} columns")
+        
+        # === APPLY SCHEMA IF PROVIDED ===
+        if schema and len(schema) > 0:
+            logs.append(f"🎯 Applying custom schema ({len(schema)} columns defined)")
+            new_df = pd.DataFrame()
+            
+            for field in schema:
+                target_name = field.get('name', '').strip()
+                if not target_name:
+                    continue
+                    
+                source_col = field.get('mapFrom', '')
+                field_type = field.get('type', 'text')
+                required = field.get('required', False)
+                
+                # Find source column (exact match or fuzzy)
+                if source_col and source_col in df.columns:
+                    new_df[target_name] = df[source_col].copy()
+                    logs.append(f"  📎 Mapped '{source_col}' → '{target_name}'")
+                else:
+                    # Try to find matching column
+                    found = False
+                    for col in df.columns:
+                        if target_name.lower() in col.lower() or col.lower() in target_name.lower():
+                            new_df[target_name] = df[col].copy()
+                            logs.append(f"  🔍 Auto-mapped '{col}' → '{target_name}'")
+                            found = True
+                            break
+                    if not found:
+                        new_df[target_name] = ''
+                        logs.append(f"  ⚠️ No source for '{target_name}' - added empty column")
+                
+                # Apply type conversion
+                if target_name in new_df.columns:
+                    if field_type == 'number':
+                        new_df[target_name] = pd.to_numeric(new_df[target_name], errors='coerce').fillna(0)
+                    elif field_type == 'date':
+                        new_df[target_name] = pd.to_datetime(new_df[target_name], errors='coerce').dt.strftime('%Y-%m-%d').fillna('')
+                    elif field_type == 'email':
+                        new_df[target_name] = new_df[target_name].astype(str).str.lower().str.strip()
+                    elif field_type == 'phone':
+                        new_df[target_name] = new_df[target_name].astype(str).apply(
+                            lambda x: '+91-' + re.sub(r'\\D', '', str(x))[-10:-5] + '-' + re.sub(r'\\D', '', str(x))[-5:] 
+                            if len(re.sub(r'\\D', '', str(x))) >= 10 else x
+                        )
+                    elif field_type == 'boolean':
+                        new_df[target_name] = new_df[target_name].astype(str).str.lower().isin(['yes', 'true', '1', 'y'])
+                
+                # Check required
+                if required and new_df[target_name].isna().all():
+                    logs.append(f"  ❌ Required field '{target_name}' has no data!")
+            
+            df = new_df
+            logs.append(f"✅ Schema applied: {len(df.columns)} columns")
         
         # === MAGIC TRANSFORMATION ===
         df, stats = magic_transform(df, logs)
